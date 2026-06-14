@@ -315,8 +315,8 @@ export default function RoleRequestModal({
                                                 if (fileRef.current) fileRef.current.value = '';
                                                 return;
                                             }
-                                            if (file.size > 1 * 1024 * 1024) {
-                                                setError('Certificate file must be 1 MB or smaller.');
+                                            if (file.size > 5 * 1024 * 1024) {
+                                                setError('Certificate file must be 5 MB or smaller.');
                                                 if (fileRef.current) fileRef.current.value = '';
                                                 return;
                                             }
@@ -419,7 +419,7 @@ export default function RoleRequestModal({
                                 </label>
 
                                 <p className="px-1 text-xs text-slate-400">
-                                    Accepted format: PDF only · Max size: 1 MB
+                                    Accepted format: PDF only · Max size: 5 MB
                                 </p>
                             </div>
 

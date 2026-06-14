@@ -39,7 +39,7 @@ const ContactCard = () => {
             label: 'Email',
             content: 'upm-drrmh-list@up.edu.ph',
             type: 'email',
-            href: 'mailto:upm-drrmh-list@up.edu.ph',
+            href: 'https://mail.google.com/mail/u/0/?to=upm-drrmh-list@up.edu.ph&fs=1&tf=cm',
         },
         {
             icon: Phone,
@@ -142,6 +142,8 @@ const ContactCard = () => {
                                                 {item.type === 'email' ? (
                                                     <a
                                                         href={item.href}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
                                                         className="
                               mt-1 block
                               text-sm font-semibold
@@ -223,7 +225,7 @@ const ContactCard = () => {
                                         }
                                         required
                                         classNames={{
-                                            inputWrapper: 'h-14', // taller input
+                                            inputWrapper: 'h-14', 
                                         }}
                                     />
 
@@ -239,7 +241,7 @@ const ContactCard = () => {
                                         className="flex-1"
                                         classNames={{
                                             inputWrapper: 'flex-1',
-                                            input: 'h-full min-h-[175px]', // makes it visibly taller
+                                            input: 'h-full min-h-[175px]', 
                                         }}
                                     />
 
