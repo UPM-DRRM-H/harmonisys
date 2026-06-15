@@ -1,20 +1,5 @@
 'use client';
 
-/**
- * UPDATED Header.tsx
- *
- * Changes from the original:
- *  1. Imports RoleRequestModal (new component)
- *  2. Adds `roleRequestOpen` state + `pendingRequest` state
- *  3. Fetches /api/user/role-request on mount (STANDARD users only)
- *  4. Injects a "Request Role Change" button in the user dropdown,
- *     just above the divider, visible only to STANDARD users.
- *  5. Shows a "Pending" badge on the avatar when a request is pending.
- *
- * All other logic is unchanged — copy the rest of your original file as-is.
- * Only the DIFF SECTIONS are annotated with ▶ NEW or ▶ CHANGED.
- */
-
 import type React from 'react';
 import { footerLinks, headerLinks } from '@/constants';
 import { handleSignOut } from '@/lib/action/user';
@@ -646,9 +631,11 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                                         ).style.backgroundColor =
                                                             solidThemeColor;
                                                     }}
-                                                    onClick={() =>
-                                                        handleSignOut()
-                                                    }
+                                                    onClick={() => {
+                                                        localStorage.removeItem('locationPromptShown');
+                                                        localStorage.removeItem('userLocation');
+                                                        handleSignOut();
+                                                    }}
                                                 >
                                                     <LogOutIcon className="w-4 h-4" />
                                                     Log Out

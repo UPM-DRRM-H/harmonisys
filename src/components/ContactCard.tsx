@@ -37,9 +37,9 @@ const ContactCard = () => {
         {
             icon: Mail,
             label: 'Email',
-            content: 'upm-drrmh-list@up.edu.ph',
+            content: 'drrmh.upm@up.edu.ph',
             type: 'email',
-            href: 'https://mail.google.com/mail/u/0/?to=upm-drrmh-list@up.edu.ph&fs=1&tf=cm',
+            href: 'https://mail.google.com/mail/u/0/?to=drrmh.upm@up.edu.ph&fs=1&tf=cm',
         },
         {
             icon: Phone,
