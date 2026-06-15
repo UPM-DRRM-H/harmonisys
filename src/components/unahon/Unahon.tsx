@@ -54,7 +54,7 @@ const Unahon = ({ session }: UnahonDashboardProps) => {
                         : null,
             };
         },
-        staleTime: 2 * 60 * 1000,
+        staleTime: 0,
     });
 
     const summary = unahonDashboardData?.summary ?? null;
@@ -472,7 +472,7 @@ const Unahon = ({ session }: UnahonDashboardProps) => {
                                         ) => (
                                             <Card
                                                 key={index}
-                                                className={`shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 
+                                                className={`shadow-lg
 ${cardBg} ${cardBorder} 
 ring-2 ring-white/70`}
                                             >

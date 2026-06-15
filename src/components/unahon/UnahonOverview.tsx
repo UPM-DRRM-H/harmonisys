@@ -90,10 +90,9 @@ export default function UnahonOverview({
         'hover:shadow-[0_0_0_2px_rgba(255,255,255,0.95),0_22px_60px_rgba(0,0,0,0.20)]';
 
     const featureTile =
-        'group flex gap-3 rounded-2xl bg-[linear-gradient(to_bottom,rgba(255,255,255,0.78),rgba(157,29,29,0.05))] border border-white/80 ' +
+        'flex gap-3 rounded-2xl bg-[linear-gradient(to_bottom,rgba(255,255,255,0.78),rgba(157,29,29,0.05))] border border-white/80 ' +
         'shadow-[0_0_0_1px_rgba(255,255,255,0.6),0_8px_18px_rgba(0,0,0,0.08)] ' +
-        'px-4 py-3 transition-all duration-300 ' +
-        'hover:-translate-y-1 hover:shadow-[0_0_0_1.5px_rgba(255,255,255,0.85),0_14px_26px_rgba(0,0,0,0.14)]';
+        'px-4 py-3';
 
     // ✅ normalize images (supports 1 or many)
     const images = useMemo(() => {
@@ -247,7 +246,7 @@ export default function UnahonOverview({
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className={featureTile}>
                                         <div
-                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0"
                                             style={{
                                                 backgroundColor: `${PRIMARY}1A`,
                                             }}
@@ -269,7 +268,7 @@ export default function UnahonOverview({
 
                                     <div className={featureTile}>
                                         <div
-                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0"
                                             style={{
                                                 backgroundColor: `${PRIMARY}1A`,
                                             }}
@@ -291,7 +290,7 @@ export default function UnahonOverview({
 
                                     <div className={featureTile}>
                                         <div
-                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0"
                                             style={{
                                                 backgroundColor: `${PRIMARY}1A`,
                                             }}
@@ -313,7 +312,7 @@ export default function UnahonOverview({
 
                                     <div className={featureTile}>
                                         <div
-                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+                                            className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0"
                                             style={{
                                                 backgroundColor: `${PRIMARY}1A`,
                                             }}

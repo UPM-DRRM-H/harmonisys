@@ -123,6 +123,11 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
     );
 
     const [roleRequestOpen, setRoleRequestOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const [pendingRequest, setPendingRequest] = useState<{
         id: string;
         status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
@@ -176,8 +181,8 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
             });
     }, [session?.user?.role]);
 
-    const isStandard = session?.user?.role === UserType.STANDARD;
-    const hasPendingRequest = pendingRequest?.status === 'PENDING';
+    const isStandard = mounted && session?.user?.role === UserType.STANDARD;
+    const hasPendingRequest = mounted && pendingRequest?.status === 'PENDING';
 
     const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
 
@@ -219,7 +224,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
             title: 'Dashboard',
             url: '/dashboard',
             icon: <User className="w-4 h-4 opacity-90" />,
-            show: !!session?.user,
+            show: mounted && !!session?.user,
         },
         {
             title: 'Tools',
@@ -411,8 +416,8 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                             </nav>
 
                             <div className="flex items-center space-x-2">
-                                {session?.user && <NotificationBell />}
-                                {session?.user ? (
+                                {mounted && session?.user && <NotificationBell />}
+                                {mounted && session?.user ? (
                                     <Dropdown placement="bottom-end">
                                         <DropdownTrigger>
                                             <Button

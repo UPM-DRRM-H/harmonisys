@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { AssessmentType } from '@prisma/client';
+import { revalidatePath } from 'next/cache';
 import type { Checklist, ConfidentialForm, UnahonSummary } from '@/types';
 
 interface FilterOptions {
@@ -197,7 +198,7 @@ export const saveUnahonForm = async (data: {
     };
 }) => {
     try {
-        return await prisma.unahon.create({
+        const result = await prisma.unahon.create({
             data: {
                 client: data.client,
                 userId: data.userId,
@@ -220,6 +221,8 @@ export const saveUnahonForm = async (data: {
                 },
             },
         });
+        revalidatePath('/unahon');
+        return result;
     } catch (error) {
         console.error('Error saving Unahon form:', error);
         throw new Error('Failed to save Unahon form');
