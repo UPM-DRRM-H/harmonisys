@@ -1,20 +1,5 @@
 'use client';
 
-/**
- * UPDATED Header.tsx
- *
- * Changes from the original:
- *  1. Imports RoleRequestModal (new component)
- *  2. Adds `roleRequestOpen` state + `pendingRequest` state
- *  3. Fetches /api/user/role-request on mount (STANDARD users only)
- *  4. Injects a "Request Role Change" button in the user dropdown,
- *     just above the divider, visible only to STANDARD users.
- *  5. Shows a "Pending" badge on the avatar when a request is pending.
- *
- * All other logic is unchanged — copy the rest of your original file as-is.
- * Only the DIFF SECTIONS are annotated with ▶ NEW or ▶ CHANGED.
- */
-
 import type React from 'react';
 import { footerLinks, headerLinks } from '@/constants';
 import { handleSignOut } from '@/lib/action/user';
@@ -138,6 +123,11 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
     );
 
     const [roleRequestOpen, setRoleRequestOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const [pendingRequest, setPendingRequest] = useState<{
         id: string;
         status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
@@ -191,8 +181,8 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
             });
     }, [session?.user?.role]);
 
-    const isStandard = session?.user?.role === UserType.STANDARD;
-    const hasPendingRequest = pendingRequest?.status === 'PENDING';
+    const isStandard = mounted && session?.user?.role === UserType.STANDARD;
+    const hasPendingRequest = mounted && pendingRequest?.status === 'PENDING';
 
     const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
 
@@ -234,7 +224,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
             title: 'Dashboard',
             url: '/dashboard',
             icon: <User className="w-4 h-4 opacity-90" />,
-            show: !!session?.user,
+            show: mounted && !!session?.user,
         },
         {
             title: 'Tools',
@@ -426,8 +416,8 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                             </nav>
 
                             <div className="flex items-center space-x-2">
-                                {session?.user && <NotificationBell />}
-                                {session?.user ? (
+                                {mounted && session?.user && <NotificationBell />}
+                                {mounted && session?.user ? (
                                     <Dropdown placement="bottom-end">
                                         <DropdownTrigger>
                                             <Button
@@ -646,9 +636,11 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                                         ).style.backgroundColor =
                                                             solidThemeColor;
                                                     }}
-                                                    onClick={() =>
-                                                        handleSignOut()
-                                                    }
+                                                    onClick={() => {
+                                                        localStorage.removeItem('locationPromptShown');
+                                                        localStorage.removeItem('userLocation');
+                                                        handleSignOut();
+                                                    }}
                                                 >
                                                     <LogOutIcon className="w-4 h-4" />
                                                     Log Out

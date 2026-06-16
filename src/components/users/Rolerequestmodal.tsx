@@ -304,19 +304,25 @@ export default function RoleRequestModal({
                                     ref={fileRef}
                                     id="roleRequestCertFile"
                                     type="file"
-                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                    accept=".pdf"
                                     className="hidden"
                                     disabled={isSubmitting}
                                     onChange={(e) => {
-                                        setCertFile(
-                                            e.target.files?.[0] ?? null
-                                        );
-                                        // Clear cert-related error as soon as a file is picked
-                                        if (
-                                            error
-                                                ?.toLowerCase()
-                                                .includes('certificate')
-                                        ) {
+                                        const file = e.target.files?.[0] ?? null;
+                                        if (file) {
+                                            if (file.type !== 'application/pdf') {
+                                                setError('Only PDF files are accepted for the certificate.');
+                                                if (fileRef.current) fileRef.current.value = '';
+                                                return;
+                                            }
+                                            if (file.size > 5 * 1024 * 1024) {
+                                                setError('Certificate file must be 5 MB or smaller.');
+                                                if (fileRef.current) fileRef.current.value = '';
+                                                return;
+                                            }
+                                        }
+                                        setCertFile(file);
+                                        if (error?.toLowerCase().includes('certificate') || error?.toLowerCase().includes('pdf') || error?.toLowerCase().includes('file must be')) {
                                             setError(null);
                                         }
                                     }}
@@ -413,7 +419,7 @@ export default function RoleRequestModal({
                                 </label>
 
                                 <p className="px-1 text-xs text-slate-400">
-                                    Accepted formats: PDF, JPG, PNG, DOC, DOCX
+                                    Accepted format: PDF only · Max size: 5 MB
                                 </p>
                             </div>
 
