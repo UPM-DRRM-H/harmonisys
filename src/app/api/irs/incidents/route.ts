@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { IncidentCategory, SeverityLevel } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import {
+    validateIncidentAttachments,
+    validateIncidentLocation,
+} from '@/lib/irs/validation';
 
 // Helper function to convert form category to enum value
 function convertCategoryToEnum(category: string): IncidentCategory {
@@ -84,18 +88,32 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const locationValidation = validateIncidentLocation(location);
+        if (!locationValidation.valid) {
+            return NextResponse.json(
+                { error: locationValidation.error },
+                { status: 400 }
+            );
+        }
+
         // Handle file attachments
         const attachments: string[] = [];
         const files = formData.getAll('attachments') as File[];
+        const nonEmptyFiles = files.filter((file) => file.size > 0);
+
+        const attachmentValidation =
+            validateIncidentAttachments(nonEmptyFiles);
+        if (!attachmentValidation.valid) {
+            return NextResponse.json(
+                { error: attachmentValidation.error },
+                { status: 400 }
+            );
+        }
 
         // Note: For production, you'd want to upload files to a storage service
         // like Vercel Blob, AWS S3, or similar and store the URLs
-        for (const file of files) {
-            if (file.size > 0) {
-                // For now, just store the filename
-                // In production, upload to storage and store the URL
-                attachments.push(file.name);
-            }
+        for (const file of nonEmptyFiles) {
+            attachments.push(file.name);
         }
 
         // Create incident in database
