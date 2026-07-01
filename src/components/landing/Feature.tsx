@@ -46,14 +46,11 @@ const Features = () => {
                                 className="
                   h-full
                   rounded-3xl
-                  border border-rose-100
+                  border border-rose-300
                   bg-white
                   shadow-sm
                   transition-all duration-300 ease-out
                   will-change-transform
-                  hover:border-rose-300
-                  hover:scale-[1.03]
-                  hover:shadow-[0_0_0_3px_rgba(139,21,56,0.14)]
                   active:scale-[1.01]
                 "
                             >

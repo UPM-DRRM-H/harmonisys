@@ -52,11 +52,11 @@ interface HeaderProps {
 }
 
 const toolIconMap: Record<string, React.ReactNode> = {
-    'Incident Reporting System': <ClipboardList className="w-4 h-4" />,
-    REDAS: <Waves className="w-4 h-4" />,
-    Unahon: <Brain className="w-4 h-4" />,
-    'Mi Salud': <ActivityIcon className="w-4 h-4" />,
-    HazardHunter: <MapPinned className="w-4 h-4" />,
+    'Incident Reporting System': <Image src="/iris_logo.png" alt="IRS" width={24} height={24} className="w-6 h-6 object-contain" />,
+    REDAS: <Image src="/redas/REDAS_logo_name.png" alt="REDAS" width={24} height={24} className="w-6 h-6 object-contain" />,
+    Unahon: <Image src="/unahon_logo.png" alt="Unahon" width={32} height={32} className="w-6 h-6 object-contain rounded-full scale-[1.6]" />,
+    'Mi Salud': <Image src="/misalud_logo.png" alt="Mi Salud" width={24} height={24} className="w-6 h-6 object-contain" />,
+    HazardHunter: <Image src="/hazardHunter_logo.png" alt="HazardHunter" width={24} height={24} className="w-6 h-6 object-contain" />,
 };
 
 const headerThemes: Record<string, string> = {
@@ -286,7 +286,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                     }
                                 >
                                     <div className="flex flex-col items-start leading-tight">
-                                        <span className="font-black text-sm sm:text-base">
+                                        <span className="font-black text-sm sm:text-base hidden min-[380px]:block">
                                             HARMONISYS.PH
                                         </span>
                                         <span className="text-xs opacity-80 font-normal hidden sm:block">
@@ -347,25 +347,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
             data-[hover=true]:bg-[color:var(--tool-hover-bg)]
             data-[hover=true]:text-[color:var(--tool-accent)]
           "
-                                                                        startContent={
-                                                                            <div
-                                                                                className="p-2 rounded-lg"
-                                                                                style={{
-                                                                                    backgroundColor:
-                                                                                        'var(--tool-icon-bg)',
-                                                                                }}
-                                                                            >
-                                                                                <span
-                                                                                    style={{
-                                                                                        color: 'var(--tool-accent)',
-                                                                                    }}
-                                                                                >
-                                                                                    {
-                                                                                        icon
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                        }
+                                                                        startContent={icon}
                                                                     >
                                                                         <div className="flex flex-col">
                                                                             <span className="font-medium">
@@ -415,7 +397,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                 })}
                             </nav>
 
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
                                 {mounted && session?.user && <NotificationBell />}
                                 {mounted && session?.user ? (
                                     <Dropdown placement="bottom-end">
@@ -765,23 +747,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                                                             '';
                                                                     }}
                                                                 >
-                                                                    <div
-                                                                        className="p-2 rounded-lg shrink-0"
-                                                                        style={{
-                                                                            backgroundColor:
-                                                                                'var(--tool-icon-bg)',
-                                                                        }}
-                                                                    >
-                                                                        <span
-                                                                            style={{
-                                                                                color: 'var(--tool-accent)',
-                                                                            }}
-                                                                        >
-                                                                            {
-                                                                                icon
-                                                                            }
-                                                                        </span>
-                                                                    </div>
+                                                                    {icon}
                                                                     <div className="flex flex-col min-w-0">
                                                                         <span className="font-medium text-sm text-gray-900 truncate">
                                                                             {

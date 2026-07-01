@@ -19,8 +19,8 @@ const Hero = ({ session }: { session: Session | null }) => {
         { src: '/upmcph.png', alt: 'UPM-CPH' },
         { src: '/drrmh.png', alt: 'DRRMH', scale: 1.05 },
         { src: '/dostPhivolcs.png', alt: 'DOST-PHIVOLCS' },
-        { src: '/DOST.png', alt: 'DOST' },
-        { src: '/pchrd.png', alt: 'PCHRD', scale: 1.05 },
+        { src: '/DOST.png', alt: 'DOST'},
+        { src: '/pchrd.png', alt: 'PCHRD' },
     ];
 
     return (
@@ -58,7 +58,7 @@ const Hero = ({ session }: { session: Session | null }) => {
                     {/* Headline inline*/}
                     <h1
                         className="mt-6 font-black
-                        text-[3.2rem]
+                        text-[2.2rem]
                         sm:text-[3.9rem]
                         md:text-[4.6rem]
                         lg:text-[5.6rem]
@@ -146,7 +146,7 @@ const Hero = ({ session }: { session: Session | null }) => {
                     <div className="mx-auto max-w-6xl">
                         <div className="flex flex-wrap xl:flex-nowrap items-center justify-center gap-1 md:gap-2 px-4 py-2">
                             {partnerLogos.map((logo) => (
-                                <div
+                                <a
                                     key={logo.alt}
                                     className="
                                 group
@@ -154,10 +154,6 @@ const Hero = ({ session }: { session: Session | null }) => {
                                 md:w-[115px] md:h-[80px]
                                 lg:w-[125px] lg:h-[88px]
                                 flex items-center justify-center xl:shrink-0
-
-                                transition-all duration-300 ease-out
-                                hover:scale-[1.12]
-                                hover:z-10
                             "
                                 >
                                     <Image
@@ -175,7 +171,7 @@ const Hero = ({ session }: { session: Session | null }) => {
                                             transform: `scale(${logo.scale || 1})`,
                                         }}
                                     />
-                                </div>
+                                </a>
                             ))}
                         </div>
                     </div>

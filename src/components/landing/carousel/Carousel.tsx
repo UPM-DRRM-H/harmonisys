@@ -98,17 +98,17 @@ const Carousel = ({ isAuthenticated = false }: CarouselProps) => {
     return (
         <section
             id="tools"
-            className="relative overflow-x-hidden overflow-y-visible bg-white text-slate-900"
+            className="relative overflow-x-hidden overflow-y-hidden bg-white text-slate-900"
         >
             <div className="relative container mx-auto px-6 w-full max-w-7xl pt-14 pb-10">
                 {/* Header */}
-                <div className="flex items-start justify-between gap-6">
-                    <div className="max-w-none">
-                        <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 bg-gradient-to-r from-[#7A0F1E] via-[#8B1538] to-[#A11A2F] bg-clip-text text-transparent">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 sm:gap-6">
+                    <div className="w-full sm:max-w-none text-center sm:text-left">
+                        <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black tracking-tight text-slate-900 bg-gradient-to-r from-[#7A0F1E] via-[#8B1538] to-[#A11A2F] bg-clip-text text-transparent">
                             Harmonized DRRM-H
                         </h2>
 
-                        <p className="mt-3 text-base sm:text-lg text-black font-medium sm:whitespace-nowrap">
+                        <p className="mt-3 text-sm sm:text-base lg:text-lg text-black font-medium">
                             Disaster Risk Reduction and Management in Health
                             tools designed for preparedness, response, and
                             recovery.
@@ -123,9 +123,8 @@ const Carousel = ({ isAuthenticated = false }: CarouselProps) => {
                             size="lg"
                             onPress={scrollPrev}
                             className="
-                rounded-xl bg-white border-red-300 text-red-700
-                hover:bg-red-50 hover:border-red-400
-                shadow-sm hover:shadow-md transition-all
+                rounded-xl bg-[#8B1538] text-white
+                shadow-md hover:bg-[#7A0F1E] hover:shadow-lg transition-all
               "
                             aria-label="Previous item"
                         >

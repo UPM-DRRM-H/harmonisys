@@ -112,12 +112,16 @@ export default function NotificationBell({
     const updatePosition = useCallback(() => {
         if (!buttonRef.current) return;
         const rect = buttonRef.current.getBoundingClientRect();
+        const panelWidth = Math.min(380, window.innerWidth - 16);
+        const rightSpace = window.innerWidth - rect.right;
+        // On mobile the bell is near the right edge so right-align to screen edge
+        const left = Math.max(8, rect.right - panelWidth);
         setDropdownStyle({
             position: 'fixed',
             top: rect.bottom + 8,
-            right: window.innerWidth - rect.right,
+            left,
             zIndex: 9999,
-            width: Math.min(380, window.innerWidth - 16),
+            width: panelWidth,
         });
     }, []);
 

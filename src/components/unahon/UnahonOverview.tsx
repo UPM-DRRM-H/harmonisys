@@ -23,11 +23,7 @@ type UnahonOverviewProps = {
     subheading?: string;
     description: string;
     subdescription?: string;
-
-    // ✅ keep existing
     imageUrl: string;
-
-    // ✅ new (optional): pass multiple images here
     imageUrls?: string[];
 
     urls: string[];

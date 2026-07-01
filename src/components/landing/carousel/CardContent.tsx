@@ -2,16 +2,15 @@ import React from 'react';
 import type { CardContentProps } from '@/types';
 import { Button } from '@heroui/react';
 import Link from 'next/link';
+import Image from 'next/image';
 
-import { FileText, Waves, HeartPulse, Activity, Map } from 'lucide-react';
-
-const iconMap = {
-    file: FileText,
-    waves: Waves,
-    heart: HeartPulse,
-    activity: Activity,
-    map: Map,
-} as const;
+const iconMap: Record<string, string> = {
+    file: '/iris_logo.png',
+    waves: '/redas/REDAS_logo_name.png',
+    heart: '/unahon_logo.png',
+    activity: '/misalud_logo.png',
+    map: '/hazardHunter_logo.png',
+};
 
 type CardContentExtraProps = {
     isAuthenticated?: boolean;
@@ -23,10 +22,8 @@ const CardContent = ({
 }: CardContentProps & CardContentExtraProps) => {
     if (!carouselItem) return null;
 
-    const iconKey = (carouselItem as any).icon as
-        | keyof typeof iconMap
-        | undefined;
-    const Icon = iconKey && iconMap[iconKey] ? iconMap[iconKey] : FileText;
+    const iconKey = (carouselItem as any).icon as string | undefined;
+    const iconSrc = iconKey && iconMap[iconKey] ? iconMap[iconKey] : '/iris_logo.png';
 
     return (
         <div className="flex h-full flex-col p-5">
@@ -41,7 +38,7 @@ const CardContent = ({
             bg-gradient-to-br from-[#8B1538]/10 to-[#A11A2F]/10
           "
                 >
-                    <Icon className="h-6 w-6 text-[#7A0F1E]" />
+                    <Image src={iconSrc} alt={carouselItem.title} width={28} height={28} className="h-7 w-7 object-contain" />
                 </div>
 
                 {/* Title */}

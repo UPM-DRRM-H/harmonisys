@@ -23,7 +23,6 @@ const IRSCharts = ({ locationData, loading, className }: Props) => {
         setChartKey((k) => k + 1);
     };
 
-    // ✅ remove "Unknown" (treat as missing location)
     const cleaned = useMemo(
         () =>
             locationData.filter(
@@ -50,7 +49,7 @@ const IRSCharts = ({ locationData, loading, className }: Props) => {
 
     const hasData = sorted.length > 0 && total > 0;
 
-    // ✅ Reset when navigating to this route again
+
     useEffect(() => {
         const el = chartWrapRef.current;
         if (!el) return;
@@ -64,7 +63,7 @@ const IRSCharts = ({ locationData, loading, className }: Props) => {
                 if (isInView && !wasInViewRef.current) {
                     triggerAnimate();
                 }
-
+                
                 wasInViewRef.current = isInView;
             },
             {

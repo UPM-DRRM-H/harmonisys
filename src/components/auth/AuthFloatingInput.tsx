@@ -105,7 +105,7 @@ const AuthFloatingInput: React.FC<AuthFloatingInputProps> = ({
                     <button
                         type="button"
                         onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 transition-colors hover:text-white"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 transition-colors hover:text-whit"
                     >
                         {showPassword ? (
                             <EyeOff className="h-5 w-5" />

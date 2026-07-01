@@ -15,12 +15,12 @@ type FooterProps = {
 
 const Footer = ({ isAuthenticated = false }: FooterProps) => {
     const partnerLogos = [
-        { src: '/upm-bd.png', alt: 'UPM' },
-        { src: '/upmcph-bd.png', alt: 'UPM-CPH' },
-        { src: '/drrmh-bd.png', alt: 'DRRMH' },
-        { src: '/dostPhivolcs-bd.png', alt: 'DOST PHIVOLCS' },
-        { src: '/DOST-bd.png', alt: 'DOST' },
-        { src: '/pchrd-bd.png', alt: 'PCHRD' },
+        { src: '/upm-bd.png', alt: 'UPM', href: 'https://www.facebook.com/UPManilaOfficial' },
+        { src: '/upmcph-bd.png', alt: 'UPM-CPH', href: 'https://www.facebook.com/UPCPH' },
+        { src: '/drrmh-bd.png', alt: 'DRRMH', href: 'https://www.facebook.com/UPSimulationCenter' },
+        { src: '/dostPhivolcs-bd.png', alt: 'DOST PHIVOLCS', href: 'https://www.facebook.com/PHIVOLCS' },
+        { src: '/DOST-bd.png', alt: 'DOST', href: 'https://www.dost.gov.ph/' },
+        { src: '/pchrd-bd.png', alt: 'PCHRD', href: 'https://www.facebook.com/dostpchrd' },
     ];
 
     return (
@@ -54,8 +54,11 @@ const Footer = ({ isAuthenticated = false }: FooterProps) => {
 
                             <div className="flex items-center gap-[2px]">
                                 {partnerLogos.map((logo, index) => (
-                                    <div
+                                    <a
                                         key={index}
+                                        href={logo.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="
   w-12 h-12
   flex items-center justify-center
@@ -74,7 +77,7 @@ const Footer = ({ isAuthenticated = false }: FooterProps) => {
   drop-shadow-[0_0_2px_rgba(255,255,255,0.6)]
 `}
                                         />
-                                    </div>
+                                    </a>
                                 ))}
                             </div>
                         </div>

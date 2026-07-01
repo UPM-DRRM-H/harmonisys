@@ -239,7 +239,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
                     {/* Top row: icon + title */}
                     <div className="flex items-center gap-4 mb-5">
                         <div
-                            className={`p-4 rounded-2xl ${color} shadow-lg group-hover:scale-105 transition-all duration-300`}
+                            className="p-1 rounded-2xl group-hover:scale-105 transition-all duration-300"
                         >
                             {icon}
                         </div>
@@ -431,7 +431,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'IRS',
             description:
                 'Incident Reporting System for emergency drills and real-time incident tracking',
-            icon: <AlertTriangle className="w-7 h-7 text-white" />,
+            icon: <Image src="/iris_logo.png" alt="IRS" width={40} height={40} className="w-10 h-10 object-contain" />,
             stats: stats?.overview.totalIncidents.toString() || '0',
             trend: stats?.recent.recentIncidents
                 ? `+${stats.recent.recentIncidents} this month`
@@ -444,7 +444,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'REDAS',
             description:
                 'Rapid Earthquake Damage Assessment System training programs',
-            icon: <GlobeIcon className="w-7 h-7 text-white" />,
+            icon: <Image src="/redas/REDAS_logo_name.png" alt="REDAS" width={40} height={40} className="w-10 h-10 object-contain" />,
             stats: stats?.overview.redasTrainingSessions.toString() || '0',
             trend: 'Active training programs',
             color: toolTheme.redas,
@@ -455,7 +455,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'Unahon',
             description:
                 'Mental health screening tool for disaster-affected communities',
-            icon: <ShieldCheck className="w-7 h-7 text-white" />,
+            icon: <Image src="/unahon_logo.png" alt="Unahon" width={80} height={80} className="w-16 h-16 object-contain rounded-full" />,
             stats: stats?.overview.totalUnahonAssessments.toString() || '0',
             trend: stats?.recent.recentUnahonAssessments
                 ? `+${stats.recent.recentUnahonAssessments} this month`
@@ -468,7 +468,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'Mi Salud',
             description:
                 'Mental and physical health monitoring for disaster responders',
-            icon: <Heart className="w-7 h-7 text-white" />,
+            icon: <Image src="/misalud_logo.png" alt="Mi Salud" width={40} height={40} className="w-10 h-10 object-contain" />,
             stats: stats?.overview.totalQuestionnaires.toString() || '0',
             trend: stats?.recent.recentSubmissions
                 ? `+${stats.recent.recentSubmissions} this month`
@@ -481,7 +481,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'HazardHunter',
             description:
                 'Natural hazard assessment and risk analysis for Philippine locations',
-            icon: <MapPin className="w-7 h-7 text-white" />,
+            icon: <Image src="/hazardHunter_logo.png" alt="HazardHunter" width={40} height={40} className="w-10 h-10 object-contain" />,
             stats: 'Active',
             trend: 'Real-time monitoring',
             color: toolTheme.hazardhunter,

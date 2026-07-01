@@ -79,7 +79,7 @@ const About = () => {
             <div className="relative container mx-auto px-6 w-full max-w-7xl py-24">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
                     {/* Content */}
-                    <div className="space-y-8">
+                    <div className="space-y-8 min-w-0">
                         <div>
                             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md shadow-sm mb-3">
                                 <Info className="w-4 h-4 text-[#FFF523]" />
@@ -88,21 +88,21 @@ const About = () => {
                                 </span>
                             </div>
 
-                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight">
+                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight break-words">
                                 Empowering Communities Through{' '}
                                 <span className="text-[#FFF523] drop-shadow-sm">
                                     Smart Disaster Response
                                 </span>
                             </h2>
 
-                            <p className="mt-6 text-lg text-white leading-relaxed">
+                            <p className="mt-6 text-base sm:text-lg text-white leading-relaxed">
                                 Our Disaster Risk Reduction and Management in
                                 Health (DRRM-H) web application streamlines
                                 reporting, data analysis, and communication
                                 during emergency drills and real-world events.
                             </p>
 
-                            <p className="mt-4 text-lg text-white leading-relaxed">
+                            <p className="mt-4 text-base sm:text-lg text-white leading-relaxed">
                                 With easy-to-use tools and real-time insights,
                                 we enable local authorities and health teams to
                                 safeguard public health and enhance preparedness
@@ -133,9 +133,9 @@ const About = () => {
 
                     {/* Visual */}
                     <div className="relative mt-8 flex justify-center lg:justify-end">
-                        <div className="relative w-fit">
+                        <div className="relative w-full max-w-[510px] mx-auto lg:mx-0 lg:w-fit">
                             {/* Bigger card */}
-                            <Card className="bg-white border-0 overflow-hidden rounded-3xl shadow-2xl w-[400px] sm:w-[470px] md:w-[510px]">
+                            <Card className="bg-white border-0 overflow-hidden rounded-3xl shadow-2xl w-full sm:w-[470px] md:w-[510px]">
                                 <CardBody className="p-0 relative w-full aspect-[1/1.1]">
                                     {/* Slider */}
                                     <div className="absolute inset-0 overflow-hidden">
