@@ -681,23 +681,26 @@ const HazardHunter = () => {
             if (!response.ok) {
                 setHazardData(null);
                 setErrorMessage(
-                    result?.data?.message ||
+                    result?.error ||
                         result?.message ||
+                        result?.data?.message ||
                         'Failed to fetch hazard assessment data'
                 );
                 return;
             }
 
-            if (result?.data?.success && result?.data?.data) {
-                const payload = result.data.data;
-                const normalizedHazardData = payload?.data ?? payload;
+            const payload = result?.data?.data ?? result?.data ?? result;
+            const normalizedHazardData = payload?.data ?? payload;
 
+            if (payload) {
                 setHazardData(normalizedHazardData);
                 setIsResultsPanelOpen(true);
             } else {
                 setHazardData(null);
                 setErrorMessage(
-                    result?.data?.message ||
+                    result?.error ||
+                        result?.message ||
+                        result?.data?.message ||
                         'Failed to fetch hazard assessment data'
                 );
             }
