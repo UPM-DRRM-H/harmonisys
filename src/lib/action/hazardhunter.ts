@@ -44,18 +44,17 @@ export async function fetchToken(): Promise<string> {
         cachedToken = data.token || data.access_token;
 
         if (!cachedToken) {
-            throw new Error('Token response did not include a token.');
+            throw new Error(
+                'Token response did not include a token.'
+            );
         }
 
         tokenExpiry = Date.now() + 1000 * 60 * 50;
         return cachedToken;
-    } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-            throw new Error(
-                'HazardHunter token request timed out. The GeoRisk API may be unavailable or too slow right now.'
-            );
+    } catch (error: any) {
+        if (error.name === 'AbortError' || error instanceof DOMException) {
+            throw new Error('GeoRisk Token API timed out.');
         }
-
         throw error;
     } finally {
         clearTimeout(timeout);
@@ -69,40 +68,33 @@ async function getValidToken(): Promise<string> {
     return cachedToken;
 }
 
-export async function fetchHazardAssessment(
-    latitude: number,
-    longitude: number
-) {
-    const token = await getValidToken();
+export async function fetchHazardAssessment(latitude: number, longitude: number) {
     const payload = JSON.stringify({ latitude, longitude });
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
+    
     try {
-        const res = await fetch('https://api.georisk.gov.ph/api/assessments', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: payload,
-            signal: controller.signal,
-        });
+        const token = await getValidToken();
+        const controller = new AbortController();
+        // Increased timeout to 15s to give GeoRisk more time to respond
+        const timeout = setTimeout(() => controller.abort(), 15000);
 
-        if (res.status === 401) {
-            const newToken = await fetchToken();
+        try {
+            const res = await fetch('https://api.georisk.gov.ph/api/assessments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: payload,
+                signal: controller.signal,
+            });
 
-            const retryController = new AbortController();
-            const retryTimeout = setTimeout(
-                () => retryController.abort(),
-                15000
-            );
+            if (res.status === 401) {
+                const newToken = await fetchToken();
+                const retryController = new AbortController();
+                const retryTimeout = setTimeout(() => retryController.abort(), 15000);
 
-            try {
-                const retryRes = await fetch(
-                    'https://api.georisk.gov.ph/api/assessments',
-                    {
+                try {
+                    const retryRes = await fetch('https://api.georisk.gov.ph/api/assessments', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -110,41 +102,39 @@ export async function fetchHazardAssessment(
                         },
                         body: payload,
                         signal: retryController.signal,
+                    });
+
+                    if (!retryRes.ok) {
+                        throw new Error(`Retry failed with status ${retryRes.status}`);
                     }
-                );
 
-                if (!retryRes.ok) {
-                    const retryErrorText = await retryRes.text();
-                    throw new Error(
-                        `Retry failed with status ${retryRes.status}: ${retryErrorText}`
-                    );
+                    const retryJson = await retryRes.json();
+                    return { success: true, data: extractHazardPayload(retryJson) };
+                } finally {
+                    clearTimeout(retryTimeout);
                 }
-
-                const retryJson = await retryRes.json();
-                return extractHazardPayload(retryJson);
-            } finally {
-                clearTimeout(retryTimeout);
             }
+
+            if (!res.ok) {
+                throw new Error(`Assessment endpoint responded with status ${res.status}`);
+            }
+
+            const json = await res.json();
+            return { success: true, data: extractHazardPayload(json) };
+
+        } catch (innerError: any) {
+            if (innerError.name === 'AbortError') {
+                throw new Error('GeoRisk Assessment endpoint timed out.');
+            }
+            throw innerError;
+        } finally {
+            clearTimeout(timeout);
         }
 
-        if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(
-                `Assessment failed with status ${res.status}: ${errorText}`
-            );
-        }
-
-        const json = await res.json();
-        return extractHazardPayload(json);
-    } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-            throw new Error(
-                'Hazard assessment request timed out. The GeoRisk API may be unavailable or too slow right now.'
-            );
-        }
-
-        throw error;
-    } finally {
-        clearTimeout(timeout);
+    } catch (error: any) {
+        return {
+            success: false,
+            error: error.message || 'An unexpected error occurred while communicating with GeoRisk API.',
+        };
     }
 }

@@ -15,8 +15,11 @@ import type { IncidentFormData } from '@/types';
 import { IncidentCategory } from '@prisma/client';
 import { useState, useEffect } from 'react';
 import { DateValue, CalendarDate } from '@internationalized/date';
-import { CITY_TO_REGION } from '@/utils/philippineRegions';
 import { PhraseBank } from './PhraseBank';
+import {
+    validateIncidentAttachments,
+    validateIncidentLocation,
+} from '@/lib/irs/validation';
 
 type Props = {
     onClose?: () => void;
@@ -67,9 +70,12 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
     const [errorMessage, setErrorMessage] = useState<string>('');
 
     const [locationError, setLocationError] = useState<string>('');
+    const [locationAutoLoadFailed, setLocationAutoLoadFailed] = useState(false);
+    const [attachmentError, setAttachmentError] = useState<string>('');
 
     useEffect(() => {
         if (!navigator.geolocation) {
+            setLocationAutoLoadFailed(true);
             setLocationError('Geolocation not supported by your browser.');
             return;
         }
@@ -79,8 +85,9 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
 
         const timeoutId = setTimeout(() => {
             setIsLocating(false);
+            setLocationAutoLoadFailed(true);
             setLocationError(
-                'Location request timed out. Please enter manually.'
+                'Location request timed out. Please enter a specific location manually (must include city).'
             );
         }, 10000);
 
@@ -104,12 +111,16 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
                             ...prev,
                             location: data.display_name,
                         }));
+                        setLocationAutoLoadFailed(false);
                     } else {
-                        // Fallback: use raw coords
                         setForm((prev) => ({
                             ...prev,
                             location: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
                         }));
+                        setLocationAutoLoadFailed(true);
+                        setLocationError(
+                            'Could not resolve address. Please edit to include a city or municipality.'
+                        );
                     }
                 } catch (err) {
                     console.error('Reverse geocode error:', err);
@@ -117,6 +128,10 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
                         ...prev,
                         location: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
                     }));
+                    setLocationAutoLoadFailed(true);
+                    setLocationError(
+                        'Could not resolve address. Please edit to include a city or municipality.'
+                    );
                 } finally {
                     clearTimeout(timeoutId);
                     setIsLocating(false);
@@ -125,15 +140,16 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
             (error) => {
                 clearTimeout(timeoutId);
                 setIsLocating(false);
+                setLocationAutoLoadFailed(true);
 
                 const messages: Record<number, string> = {
-                    1: 'Location access denied. Please enter manually.',
-                    2: 'Location unavailable. Please enter manually.',
-                    3: 'Location request timed out. Please enter manually.',
+                    1: 'Location access denied. Please enter a specific location manually (must include city).',
+                    2: 'Location unavailable. Please enter a specific location manually (must include city).',
+                    3: 'Location request timed out. Please enter a specific location manually (must include city).',
                 };
                 setLocationError(
                     messages[error.code] ??
-                        'Location failed. Please enter manually.'
+                        'Location failed. Please enter a specific location manually (must include city).'
                 );
             },
             { timeout: 8000, maximumAge: 60000, enableHighAccuracy: false }
@@ -160,6 +176,13 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
             HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
         >
     ) => {
+        if (e.target.name === 'location') {
+            setLocationAutoLoadFailed(false);
+            if (!isLocating) {
+                setLocationError('');
+            }
+        }
+
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
@@ -174,7 +197,23 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setForm({ ...form, attachments: e.target.files });
+        const files = e.target.files;
+        if (!files || files.length === 0) {
+            setForm({ ...form, attachments: null });
+            setAttachmentError('');
+            return;
+        }
+
+        const validation = validateIncidentAttachments(Array.from(files));
+        if (!validation.valid) {
+            setAttachmentError(validation.error ?? 'Invalid file.');
+            e.target.value = '';
+            setForm({ ...form, attachments: null });
+            return;
+        }
+
+        setAttachmentError('');
+        setForm({ ...form, attachments: files });
     };
 
     const handleOtherDetailChange = (
@@ -189,29 +228,44 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
     const handleClose = () => {
         resetForm();
         setSubmitStatus('idle');
+        setLocationAutoLoadFailed(false);
+        setLocationError('');
+        setAttachmentError('');
         onClose?.();
-    };
-
-    const containsCity = (location: string) => {
-        if (!location) return false;
-
-        return Object.keys(CITY_TO_REGION).some((city) =>
-            location.toLowerCase().includes(city)
-        );
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setSubmitStatus('idle');
+        setErrorMessage('');
 
-        if (!containsCity(form.location)) {
+        const locationValidation = validateIncidentLocation(form.location, {
+            autoLoadFailed: locationAutoLoadFailed,
+        });
+
+        if (!locationValidation.valid) {
             setSubmitStatus('error');
             setErrorMessage(
-                'Please ensure your location includes a valid city.'
+                locationValidation.error ??
+                    'Please ensure your specific location includes a valid city.'
             );
             setIsSubmitting(false);
             return;
+        }
+
+        if (form.attachments) {
+            const attachmentValidation = validateIncidentAttachments(
+                Array.from(form.attachments)
+            );
+            if (!attachmentValidation.valid) {
+                setSubmitStatus('error');
+                setErrorMessage(
+                    attachmentValidation.error ?? 'Invalid attachment.'
+                );
+                setIsSubmitting(false);
+                return;
+            }
         }
 
         const formData = new FormData();
@@ -249,10 +303,14 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
             } else {
                 console.error('Submission error:', result.error);
                 setSubmitStatus('error');
+                setErrorMessage(
+                    result.error ?? 'Submission failed. Please try again.'
+                );
             }
         } catch (error) {
             console.error('Network error:', error);
             setSubmitStatus('error');
+            setErrorMessage('Network error. Please check your connection and try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -297,7 +355,7 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
                             <Input
                                 isRequired
                                 name="location"
-                                label="Location"
+                                label="Specific Location"
                                 value={
                                     isLocating
                                         ? 'Getting current location...'
@@ -305,12 +363,13 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
                                 }
                                 onChange={handleChange}
                                 isDisabled={isSubmitting || isLocating}
+                                isInvalid={!!locationError && !isLocating}
                                 description={
                                     locationError
                                         ? locationError
                                         : isLocating
                                           ? 'Auto-detecting your current location...'
-                                          : 'You can edit this manually (must include city)'
+                                          : 'Include a valid Philippine city or municipality (e.g., "UP Manila, Manila")'
                                 }
                                 variant="bordered"
                                 className="font-medium"
@@ -525,8 +584,11 @@ const Questionnaire = ({ onClose, openSuccessModal }: Props) => {
                                     type="file"
                                     label="Upload Files (optional)"
                                     multiple
+                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                                     onChange={handleFileChange}
                                     isDisabled={isSubmitting}
+                                    isInvalid={!!attachmentError}
+                                    description={attachmentError || undefined}
                                     variant="bordered"
                                     classNames={commonField}
                                 />
