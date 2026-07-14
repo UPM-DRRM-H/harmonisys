@@ -1037,7 +1037,7 @@ const HazardHunter = () => {
                     <div className="bg-gradient-to-r from-[#5A3A1A] via-[#7B5A3A] to-[#9D7C5A]">
                         <div className="p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                             <div>
-                                <h1 className="text-4xl lg:text-5xl font-black text-white drop-shadow-[0_12px_22px_rgba(0,0,0,0.35)] mb-2">
+                                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white drop-shadow-[0_12px_22px_rgba(0,0,0,0.35)] mb-2">
                                     HazardHunter Dashboard
                                 </h1>
                                 <p className="text-white/85 text-lg">
