@@ -136,8 +136,8 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-white/10 blur-2xl" />
 
                 <div className="flex items-start justify-between relative z-10 gap-4">
-                    <div className="space-y-4 min-w-0">
-                        <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-[0.18em] leading-tight">
+                    <div className="space-y-4 min-w-0 w-full flex flex-col items-start">
+                        <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-[0.18em] leading-tight whitespace-nowrap">
                             {title}
                         </p>
 
@@ -166,8 +166,9 @@ const MetricCard: React.FC<MetricCardProps> = ({
                         ) : null}
                     </div>
 
+                    {/* Icon: hidden on mobile, shown on sm+ */}
                     <div
-                        className={`shrink-0 p-4 rounded-3xl ${color} shadow-lg group-hover:scale-105 transition-all duration-300`}
+                        className={`hidden sm:flex shrink-0 p-4 rounded-3xl ${color} shadow-lg group-hover:scale-105 transition-all duration-300`}
                     >
                         {icon}
                     </div>
@@ -302,6 +303,8 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
 
     const [selectedTab, setSelectedTab] = useState('overview');
     const [avatarError, setAvatarError] = useState(false);
+    const [showActivitiesModal, setShowActivitiesModal] = useState(false);
+    const [selectedActivity, setSelectedActivity] = useState<{action: string; tool: string; user: string; timestamp: string} | null>(null);
 
     const [isResponderIdleOpen, setIsResponderIdleOpen] = useState(false);
     const [showResponderTools, setShowResponderTools] = useState(false);
@@ -678,7 +681,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     ];
 
     const adminMetrics = (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <MetricCard
                 title="Total Users"
                 value={stats?.overview.totalUsers || 0}
@@ -860,7 +863,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                     adminMetrics
                 ) : (
                     <div
-                        className={`grid grid-cols-1 sm:grid-cols-2 ${metricsGridCols} gap-6 mb-8`}
+                        className={`grid grid-cols-1 md:grid-cols-2 ${metricsGridCols} gap-6 mb-8`}
                     >
                         {(isResponder ? responderMetrics : standardMetrics).map(
                             (m, idx) => (
@@ -940,9 +943,15 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                                     : 'Recent Activities'}
                                             </h3>
                                             <div className="flex-1 h-px bg-gradient-to-r from-[#B0122B]/25 to-transparent" />
+                                            {/* Mobile view all button */}
+                                            <button
+                                                className="sm:hidden text-xs font-semibold text-[#7A0C1E] underline underline-offset-2"
+                                                onClick={() => setShowActivitiesModal(true)}
+                                            >
+                                                View all
+                                            </button>
                                         </div>
                                     </CardHeader>
-
                                     <CardBody className="px-6 pb-6">
                                         <div className="space-y-4">
                                             {activitiesToShow.length ? (
@@ -951,6 +960,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                                     .map((activity, index) => (
                                                         <div
                                                             key={index}
+                                                            onClick={() => setSelectedActivity(activity)}
                                                             className="
                                                             group relative flex items-center gap-4
                                                             rounded-2xl border border-rose-200/70
@@ -960,6 +970,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                                             hover:-translate-y-0.5
                                                             hover:shadow-lg
                                                             hover:border-[#B0122B]/25
+                                                            cursor-pointer
                                                         "
                                                         >
                                                             <div className="absolute left-0 top-4 bottom-4 w-1 rounded-full bg-gradient-to-b from-[#7A0C1E] to-[#B91C1C] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1050,6 +1061,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                         .map((activity, index) => (
                                             <div
                                                 key={index}
+                                                onClick={() => setSelectedActivity(activity)}
                                                 className="
                                                 group relative flex items-center gap-4
                                                 rounded-2xl border border-rose-200/70
@@ -1059,6 +1071,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                                 hover:-translate-y-0.5
                                                 hover:shadow-lg
                                                 hover:border-[#B0122B]/25
+                                                cursor-pointer
                                             "
                                             >
                                                 <div className="absolute left-0 top-4 bottom-4 w-1 rounded-full bg-gradient-to-b from-[#7A0C1E] to-[#B91C1C] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1275,6 +1288,100 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                     </ModalContent>
                 </Modal>
             </div>
+
+            {/* Mobile Recent Activities Modal */}
+            {showActivitiesModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+                    onClick={() => setShowActivitiesModal(false)}
+                >
+                    <div
+                        className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[80vh] overflow-y-auto shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-slate-100">
+                            <h3 className="text-xl font-black text-slate-900">
+                                {isPersonalDashboard ? 'My Recent Activities' : 'Recent Activities'}
+                            </h3>
+                            <button
+                                onClick={() => setShowActivitiesModal(false)}
+                                className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                            >
+                                <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            {activitiesToShow.length ? activitiesToShow.slice(0, 10).map((activity, index) => (
+                                <div key={index} onClick={() => { setSelectedActivity(activity); setShowActivitiesModal(false); }} className="flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3 cursor-pointer hover:bg-rose-100/50 transition-colors">
+                                    <div className="shrink-0 p-2 rounded-xl bg-gradient-to-br from-[#FBE4E8] to-[#F6D4DA] border border-rose-100">
+                                        <Clock className="w-4 h-4 text-[#B0122B]" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-slate-900 text-sm leading-snug">{activity.action}</p>
+                                        <p className="text-xs text-slate-600 mt-0.5">
+                                            <span className="font-medium text-[#7A0C1E]">{activity.tool}</span> • {activity.user}
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-0.5">{formatTimeAgo(activity.timestamp)}</p>
+                                    </div>
+                                </div>
+                            )) : (
+                                <p className="text-center text-slate-500 py-8 text-sm">No recent activities.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Activity Detail Modal */}
+            {selectedActivity && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                    onClick={() => setSelectedActivity(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] px-6 py-5 flex items-center justify-between">
+                            <h3 className="text-lg font-black text-white">Activity Details</h3>
+                            <button onClick={() => setSelectedActivity(null)} className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="rounded-2xl bg-rose-50 border border-rose-100 p-4 space-y-3">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Action</p>
+                                    <p className="font-bold text-slate-900">{selectedActivity.action}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tool</p>
+                                    <p className="font-semibold text-[#7A0C1E]">{selectedActivity.tool}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">User</p>
+                                    <p className="font-medium text-slate-800">{selectedActivity.user}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Time</p>
+                                    <p className="font-medium text-slate-800">{formatTimeAgo(selectedActivity.timestamp)}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5">{new Date(selectedActivity.timestamp).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedActivity(null)}
+                                className="w-full h-11 rounded-2xl bg-gradient-to-r from-[#7A0C1E] to-[#A11B1B] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

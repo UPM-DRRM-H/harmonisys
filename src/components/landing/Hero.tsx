@@ -65,10 +65,10 @@ const Hero = ({ session }: { session: Session | null }) => {
                         tracking-tight leading-[1.05]
                         animate-fadeUp"
                     >
-                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent block sm:block lg:inline">
                             HARMONIZED
                         </span>{' '}
-                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent block sm:block lg:inline">
                             DRRM-H
                         </span>
                     </h1>
@@ -144,15 +144,16 @@ const Hero = ({ session }: { session: Session | null }) => {
                 {/* Logos band */}
                 <div className="mt-14 pb-28 lg:pb-36">
                     <div className="mx-auto max-w-6xl">
-                        <div className="flex flex-wrap xl:flex-nowrap items-center justify-center gap-1 md:gap-2 px-4 py-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-6 xl:flex xl:flex-nowrap items-center justify-center gap-1 px-4 py-2">
                             {partnerLogos.map((logo) => (
                                 <a
                                     key={logo.alt}
                                     className="
                                 group
-                                w-[100px] h-[70px]
-                                md:w-[115px] md:h-[80px]
-                                lg:w-[125px] lg:h-[88px]
+                                w-full h-[65px]
+                                sm:h-[60px]
+                                md:h-[70px]
+                                xl:w-[120px] xl:h-[88px]
                                 flex items-center justify-center xl:shrink-0
                             "
                                 >

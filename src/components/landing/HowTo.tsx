@@ -16,7 +16,7 @@ const About = () => {
 
     const slides = useMemo(
         () => [
-            { src: '/irs_main.png', alt: 'HowTo slide 1' },
+            { src: '/irs_main.jpg', alt: 'HowTo slide 1', scale: 1.1 },
             { src: '/redas_main.png', alt: 'HowTo slide 2' },
             { src: '/unahon_main.png', alt: 'HowTo slide 3' },
             { src: '/mi-salud_main.png', alt: 'HowTo slide 4' },
@@ -173,7 +173,10 @@ const About = () => {
                                                     {/* IMPORTANT:
                     px creates the left/right "lane" for buttons */}
                                                     <div className="relative w-full h-full flex items-center justify-center px-14 py-5">
-                                                        <div className="relative w-full h-full drop-shadow-[0_12px_25px_rgba(0,0,0,0.35)]">
+                                                        <div
+                                                            className="relative w-full h-full drop-shadow-[0_12px_25px_rgba(0,0,0,0.35)]"
+                                                            style={{ transform: `scale(${(s as any).scale ?? 1})` }}
+                                                        >
                                                             <Image
                                                                 src={s.src}
                                                                 alt={s.alt}
