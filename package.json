@@ -19,8 +19,7 @@
         "@heroui/theme": "2.4.6",
         "@paralleldrive/cuid2": "^2.2.2",
         "@prisma/client": "^6.13.0",
-        "@supabase/ssr": "^0.10.3",
-        "@supabase/supabase-js": "^2.108.0",
+        "@supabase/supabase-js": "^2.106.2",
         "@tanstack/react-query": "^5.100.5",
         "@vercel/blob": "^2.3.3",
         "bcryptjs": "^2.4.3",
@@ -59,7 +58,7 @@
         "eslint-config-next": "^15.5.10",
         "postcss": "^8.5.1",
         "prettier": "^3.4.2",
-        "prisma": "^6.19.3",
+        "prisma": "^6.13.0",
         "tailwindcss": "^3.4.17",
         "typescript": "^5.7.3"
     },
