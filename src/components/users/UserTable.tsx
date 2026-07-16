@@ -1364,16 +1364,9 @@ const UserTable = () => {
                                         emptyContent={
                                             <div className="text-center py-14">
                                                 <div className="flex flex-col items-center gap-3">
-                                                    <div className="text-5xl">
-                                                        👥
-                                                    </div>
                                                     <h3 className="text-xl font-semibold text-slate-800">
                                                         No Users Found
                                                     </h3>
-                                                    <p className="text-slate-500">
-                                                        No users are currently
-                                                        available to display.
-                                                    </p>
                                                 </div>
                                             </div>
                                         }
