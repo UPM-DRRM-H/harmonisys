@@ -54,7 +54,7 @@ const Unahon = ({ session }: UnahonDashboardProps) => {
                         : null,
             };
         },
-        staleTime: 0,
+        staleTime: 2 * 60 * 1000,
     });
 
     const summary = unahonDashboardData?.summary ?? null;

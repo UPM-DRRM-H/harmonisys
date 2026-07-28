@@ -309,11 +309,14 @@ export async function GET() {
             },
         };
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             data: dashboardStats,
             message: 'Dashboard statistics retrieved successfully',
         });
+
+        response.headers.set('Cache-Control', 'private, max-age=60');
+        return response;
     } catch (error) {
         console.error('Error fetching dashboard statistics:', error);
 

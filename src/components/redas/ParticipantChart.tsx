@@ -1,6 +1,6 @@
 import type { AggregatedData } from '@/types/Redas';
 import { Card, CardBody, CardHeader } from '@heroui/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     BarChart,
     Bar,
@@ -86,10 +86,13 @@ const Bar3D = (props: any) => {
 
 const ParticipantCharts = ({ data }: { data: AggregatedData }) => {
     const chartRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const seenRef = useRef<boolean[]>([]);
+    const hasAnimatedRef = useRef<boolean[]>([]);
     const [chartKeys, setChartKeys] = useState<number[]>([0, 0]);
 
     const triggerAnimate = (i: number) => {
+        if (hasAnimatedRef.current[i]) return;
+
+        hasAnimatedRef.current[i] = true;
         setChartKeys((prev) => {
             const next = [...prev];
             next[i] = (next[i] ?? 0) + 1;
@@ -108,16 +111,9 @@ const ParticipantCharts = ({ data }: { data: AggregatedData }) => {
                     );
                     if (idx < 0) return;
 
-                    const isInView = entry.isIntersecting;
-
-                    // animate ONLY the first time it comes into view
-                    if (isInView && !seenRef.current[idx]) {
+                    if (entry.isIntersecting) {
                         triggerAnimate(idx);
-                        seenRef.current[idx] = true;
                     }
-
-                    // if you want it to replay every time user scrolls away/back, uncomment:
-                    if (!isInView) seenRef.current[idx] = false;
                 });
             },
             { threshold: 0.55, rootMargin: '0px 0px -20% 0px' }

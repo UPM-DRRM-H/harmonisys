@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardBody, CardHeader, Button } from '@heroui/react';
@@ -204,8 +205,15 @@ export default function IRSOverview({
     const canViewIncidents =
         isAuthenticated && (isAdmin || userRole === 'RESPONDER');
 
+    const searchParams = useSearchParams();
     const [open, setOpen] = useState(false);
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get('open') === 'report' && isAuthenticated) {
+            setOpen(true);
+        }
+    }, [isAuthenticated, searchParams]);
 
     const [statsInView, setStatsInView] = useState(false);
     const [locInView, setLocInView] = useState(false);

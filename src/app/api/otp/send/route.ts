@@ -4,6 +4,8 @@ import { generateOtp } from '@/lib/otp';
 
 export const dynamic = 'force-dynamic';
 
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS) || 8000;
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
@@ -15,6 +17,9 @@ const transporter = nodemailer.createTransport({
     tls: {
         rejectUnauthorized: false,
     },
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
 });
 
 export async function POST(req: NextRequest) {
@@ -55,10 +60,18 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ success: true });
     } catch (err) {
-        console.error('[send-otp]', err);
+        console.error(
+            '[send-otp]',
+            err instanceof Error ? err.message : 'Unknown SMTP error'
+        );
+
         return NextResponse.json(
-            { success: false, message: 'Failed to send OTP. Try again.' },
-            { status: 500 }
+            {
+                success: false,
+                message:
+                    'We could not send the verification email right now. Please try again later.',
+            },
+            { status: 503 }
         );
     }
 }

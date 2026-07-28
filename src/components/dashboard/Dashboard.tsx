@@ -543,7 +543,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'Report Incident',
             description: 'Create new incident report',
             icon: <AlertTriangle className="w-6 h-6" />,
-            href: '/irs',
+            href: '/overview/irs?open=report',
             color: 'bg-gradient-to-r from-[#7A0C1E] to-[#B91C1C] hover:from-[#6B0F25] hover:to-[#991B1B] text-white shadow-xl hover:shadow-2xl',
         },
         {

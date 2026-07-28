@@ -2,15 +2,18 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 
 import { Button, Card, CardBody, CardHeader } from '@heroui/react';
 import { ExternalLink, ArrowRight, Activity, Layers } from 'lucide-react';
 
-import REDASOverview from './redas/REDASOverview';
-import IRSOverview from './irs/IRSOverview';
-import UnahonOverview from './unahon/UnahonOverview';
-import MiSaludOverview from './misalud/MiSaludOverview';
-import HazardHunterOverview from './hazardhunter/HazardHunterOverview';
+const REDASOverview = dynamic(() => import('./redas/REDASOverview'));
+const IRSOverview = dynamic(() => import('./irs/IRSOverview'));
+const UnahonOverview = dynamic(() => import('./unahon/UnahonOverview'));
+const MiSaludOverview = dynamic(() => import('./misalud/MiSaludOverview'));
+const HazardHunterOverview = dynamic(
+    () => import('./hazardhunter/HazardHunterOverview')
+);
 
 interface ToolOverviewProps {
     name: string;
