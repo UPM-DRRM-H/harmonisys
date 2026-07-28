@@ -6,18 +6,22 @@ import { auth } from '@/lib/auth';
 const MISALUDPage = async () => {
     const session = await auth();
 
-    // ✅ Only ADMIN/RESPONDER can access MiSalud dashboard
     const role = session?.user?.role;
-    const canAccess = session && (role === 'ADMIN' || role === 'RESPONDER');
 
-    if (!canAccess) {
-        redirect('/overview/misalud'); // or '/overview/misalud' (use your real overview route)
+    if (!session || (role !== 'ADMIN' && role !== 'RESPONDER')) {
+        redirect('/overview/misalud');
     }
 
+    // Responders go straight to their Team Leader dashboard
+    if (role === 'RESPONDER') {
+        redirect('/misalud/team-requests');
+    }
+
+    // Admins see the full dashboard
     return (
         <div>
             <Header session={session} />
-            <MiSalud userRole={session?.user?.role} />
+            <MiSalud userRole={role} />
         </div>
     );
 };

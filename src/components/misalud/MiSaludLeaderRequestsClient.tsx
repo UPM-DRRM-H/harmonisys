@@ -11,8 +11,7 @@ import {
     Chip,
     Skeleton,
 } from '@heroui/react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, XCircle, Users, Clock3 } from 'lucide-react';
+import { CheckCircle2, XCircle, Users, Clock3 } from 'lucide-react';
 
 type MiSaludRequest = {
     id: string;
@@ -37,7 +36,6 @@ interface Props {
 }
 
 const MiSaludLeaderRequestsClient = ({ session }: Props) => {
-    const router = useRouter();
     const queryClient = useQueryClient();
 
     const { data: leaderRequestsData, isLoading: loading } = useQuery<{
@@ -147,27 +145,14 @@ const MiSaludLeaderRequestsClient = ({ session }: Props) => {
                 <Card className="mb-8 bg-white/70 backdrop-blur-sm shadow-lg border border-white/20 overflow-hidden rounded-[28px]">
                     <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600">
                         <div className="p-6">
-                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                                <div>
-                                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
-                                        Team Requests
-                                    </h1>
-                                    <p className="text-white/85 text-lg">
-                                        Review join requests for your Mi Salud
-                                        team
-                                    </p>
-                                </div>
-
-                                <Button
-                                    variant="light"
-                                    startContent={
-                                        <ArrowLeft className="w-4 h-4" />
-                                    }
-                                    className="h-12 px-6 bg-white/15 text-white border border-white/25 backdrop-blur-sm rounded-xl"
-                                    onPress={() => router.push('/misalud')}
-                                >
-                                    Back to Mi Salud
-                                </Button>
+                            <div>
+                                <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
+                                    Team Requests
+                                </h1>
+                                <p className="text-white/85 text-lg">
+                                    Review join requests for your Mi Salud
+                                    team
+                                </p>
                             </div>
                         </div>
                     </div>

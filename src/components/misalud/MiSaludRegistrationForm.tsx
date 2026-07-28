@@ -11,6 +11,7 @@ type TeamOption = {
 type Props = {
     onSuccess?: () => void;
     onCancel?: () => void;
+    defaultName?: string;
 };
 
 const misaludTheme = {
@@ -23,10 +24,9 @@ const roleOptions = [
     { key: 'TEAM_MEMBER', label: 'Team Member' },
 ];
 
-const MiSaludRegistrationForm = ({ onSuccess, onCancel }: Props) => {
-    const [fullName, setFullName] = useState('');
+const MiSaludRegistrationForm = ({ onSuccess, onCancel, defaultName }: Props) => {
+    const [fullName, setFullName] = useState(defaultName ?? '');
     const [age, setAge] = useState('');
-    const [address, setAddress] = useState('');
     const [requestedRole, setRequestedRole] = useState<
         'TEAM_LEADER' | 'TEAM_MEMBER' | ''
     >('');
@@ -64,7 +64,6 @@ const MiSaludRegistrationForm = ({ onSuccess, onCancel }: Props) => {
             const payload = {
                 fullName,
                 age: Number(age),
-                address,
                 requestedRole,
                 teamName:
                     requestedRole === 'TEAM_LEADER' ? teamName : undefined,
@@ -107,9 +106,9 @@ const MiSaludRegistrationForm = ({ onSuccess, onCancel }: Props) => {
             <Input
                 label="Full Name"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                isRequired
+                isDisabled
                 variant="bordered"
+                description="Pulled from your account profile."
             />
 
             <Input
@@ -120,14 +119,6 @@ const MiSaludRegistrationForm = ({ onSuccess, onCancel }: Props) => {
                 isRequired
                 variant="bordered"
                 min={1}
-            />
-
-            <Input
-                label="Address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                isRequired
-                variant="bordered"
             />
 
             <Select

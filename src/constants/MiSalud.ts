@@ -160,3 +160,137 @@ export const RECOMMENDATIONS: Record<string, Recommendation[]> = {
         },
     ],
 };
+
+export const WELLNESS_DOMAINS = [
+    { id: 1, key: 'sleep', label: 'Sleep' },
+    { id: 2, key: 'food', label: 'Food' },
+    { id: 3, key: 'familySafety', label: 'Family Safety' },
+    { id: 4, key: 'exposure', label: 'Exposure' },
+    { id: 5, key: 'teamSupport', label: 'Team Support' },
+] as const;
+
+export const STATUS_BADGE_LABELS = {
+    green: 'Ready to Work',
+    yellow: 'Action Recommended',
+    red: 'Urgent Support Needed',
+    pending: 'Awaiting Response',
+} as const;
+
+/** Team-leader-facing recommendations when a domain is yellow or red */
+export const LEADER_RECOMMENDATIONS: Record<
+    number,
+    Partial<Record<'yellow' | 'red', Recommendation>>
+> = {
+    1: {
+        yellow: {
+            category: 'yellow',
+            questionId: 1,
+            title: 'Sleep — Action Recommended',
+            items: [
+                'Assign the member to a low-stress task for the remainder of the shift.',
+                'Adjust rotation to allow a rest window before the next deployment activity.',
+                'Check in privately on sleep plans before the next operational period.',
+            ],
+        },
+        red: {
+            category: 'red',
+            questionId: 1,
+            title: 'Sleep — Urgent Support Needed',
+            items: [
+                'Mandate immediate rest before any high-risk assignment.',
+                'Temporarily reassign the member away from field operations.',
+                'Escalate to medical or psychosocial support if fatigue persists.',
+            ],
+        },
+    },
+    2: {
+        yellow: {
+            category: 'yellow',
+            questionId: 2,
+            title: 'Food — Action Recommended',
+            items: [
+                'Ensure the member receives a meal break within the next shift window.',
+                'Coordinate with logistics for field rations if meals are unavailable.',
+            ],
+        },
+        red: {
+            category: 'red',
+            questionId: 2,
+            title: 'Food — Urgent Support Needed',
+            items: [
+                'Authorize an immediate meal and hydration break.',
+                'Remove the member from active tasks until basic nutrition is restored.',
+                'Monitor for signs of dehydration or exhaustion.',
+            ],
+        },
+    },
+    3: {
+        yellow: {
+            category: 'yellow',
+            questionId: 3,
+            title: 'Family Safety — Action Recommended',
+            items: [
+                'Authorize contact with family when communications are available.',
+                'Request a family welfare check through your organization.',
+                'Offer a brief check-in after the member contacts loved ones.',
+            ],
+        },
+        red: {
+            category: 'red',
+            questionId: 3,
+            title: 'Family Safety — Urgent Support Needed',
+            items: [
+                'Authorize immediate contact with family as soon as possible.',
+                'Request an urgent family welfare check through your agency.',
+                'Connect the member with psychosocial support if distress is evident.',
+                'Consider temporary relief from high-stress assignments.',
+            ],
+        },
+    },
+    4: {
+        yellow: {
+            category: 'yellow',
+            questionId: 4,
+            title: 'Exposure — Action Recommended',
+            items: [
+                'Assign the member to a lower-exposure or low-stress task.',
+                'Schedule a brief debrief with a trusted teammate or leader.',
+                'Monitor for changes in mood or performance through the shift.',
+            ],
+        },
+        red: {
+            category: 'red',
+            questionId: 4,
+            title: 'Exposure — Urgent Support Needed',
+            items: [
+                'Remove the member from high-exposure field tasks immediately.',
+                'Coordinate a peer support session or psychosocial referral.',
+                'Document the concern and escalate per agency protocols.',
+                'Do not leave the member isolated — assign a buddy when possible.',
+            ],
+        },
+    },
+    5: {
+        yellow: {
+            category: 'yellow',
+            questionId: 5,
+            title: 'Team Support — Action Recommended',
+            items: [
+                'Schedule a one-on-one check-in within the current operational window.',
+                'Clarify roles and reinforce that the member can ask for help.',
+                'Pair the member with a supportive teammate for the next task rotation.',
+            ],
+        },
+        red: {
+            category: 'red',
+            questionId: 5,
+            title: 'Team Support — Urgent Support Needed',
+            items: [
+                'Coordinate a peer support session with trusted teammates.',
+                'Provide direct leadership intervention — listen and acknowledge concerns.',
+                'Review team dynamics and address any isolation or conflict promptly.',
+                'Refer to psychosocial support services if distress continues.',
+            ],
+        },
+    },
+};

@@ -2,8 +2,10 @@ import type {
     QuestionnaireResponses,
     UrgencyLevel,
     Recommendation,
+    WellnessDomainStatus,
+    MemberOverallStatus,
 } from '@/types';
-import { QUESTIONS, RECOMMENDATIONS } from '@/constants/';
+import { QUESTIONS, RECOMMENDATIONS, LEADER_RECOMMENDATIONS } from '@/constants/';
 
 export function getUrgencyLevel(
     questionId: number,
@@ -66,4 +68,28 @@ export function generateRecommendations(
 function getOptionIndex(questionId: number, selectedOption: string): number {
     const questionOptions = QUESTIONS[questionId - 1];
     return questionOptions.options.indexOf(selectedOption);
+}
+
+export function getUrgencyFromSelectedOption(
+    questionId: number,
+    selectedOption: string
+): UrgencyLevel {
+    const optionIndex = getOptionIndex(questionId, selectedOption);
+    return getUrgencyLevel(questionId, optionIndex);
+}
+
+export function getMemberOverallStatus(
+    domainStatuses: WellnessDomainStatus[]
+): MemberOverallStatus {
+    if (domainStatuses.every((status) => status === 'pending')) return 'pending';
+    if (domainStatuses.includes('red')) return 'urgent';
+    if (domainStatuses.includes('yellow')) return 'action';
+    return 'ready';
+}
+
+export function getLeaderRecommendation(
+    questionId: number,
+    urgency: 'yellow' | 'red'
+): Recommendation | null {
+    return LEADER_RECOMMENDATIONS[questionId]?.[urgency] ?? null;
 }

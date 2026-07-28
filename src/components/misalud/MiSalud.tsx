@@ -21,8 +21,6 @@ import type { Recommendation } from '@/types';
 import { generateRecommendations } from '@/lib/action/misalud';
 import RecommendationsModal from './RecommendationsModal';
 import MiSaludRegistrationForm from './MiSaludRegistrationForm';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 
 interface QuestionnaireResponse {
     id: string;
@@ -83,6 +81,11 @@ const MiSalud = ({ userRole = 'STANDARD' }: MiSaludProps) => {
         const canAccess = isAdminView || isResponderView;
         if (!canAccess) {
             router.replace('/overview/misalud');
+            return;
+        }
+        // Responders should use the TL dashboard, not the full admin view
+        if (isResponderView && !isAdminView) {
+            router.replace('/misalud/team-requests');
         }
     }, [isAdminView, isResponderView, router]);
 
@@ -380,6 +383,9 @@ const MiSalud = ({ userRole = 'STANDARD' }: MiSaludProps) => {
         membershipStatus &&
         membershipStatus !== 'APPROVED';
 
+    // Don't render anything for responders — they're being redirected
+    if (isResponderView && !isAdminView) return null;
+
     const isLoading = isArchiveView
         ? loadingOriginal
         : selectedView === 'teams'
@@ -417,30 +423,6 @@ const MiSalud = ({ userRole = 'STANDARD' }: MiSaludProps) => {
 
                                     {/* Action Buttons */}
                                     <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end">
-                                        {!isResponderView && (
-                                            <Button
-                                                as={Link}
-                                                href="/overview/misalud"
-                                                variant="light"
-                                                startContent={
-                                                    <ArrowLeft className="w-4 h-4" />
-                                                }
-                                                className="
-                                h-12 px-6
-                                bg-white/15 text-white
-                                border border-white/25
-                                backdrop-blur-sm
-                                shadow-sm hover:shadow-md
-                                hover:bg-white/20
-                                transition-all duration-300
-                                font-medium
-                                rounded-xl
-                            "
-                                            >
-                                                Go Back
-                                            </Button>
-                                        )}
-
                                         <Button
                                             className="
                                 font-bold

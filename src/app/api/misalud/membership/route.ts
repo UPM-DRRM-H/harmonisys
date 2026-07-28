@@ -31,6 +31,7 @@ export async function GET() {
         if (approvedMembership) {
             return NextResponse.json({
                 status: 'APPROVED',
+                accountName: session.user.name ?? null,
                 membership: {
                     id: approvedMembership.id,
                     role: approvedMembership.role,
@@ -44,6 +45,7 @@ export async function GET() {
         const latestRequest = await prisma.miSaludRequest.findFirst({
             where: {
                 userId,
+                NOT: { status: 'APPROVED' },
             },
             orderBy: {
                 createdAt: 'desc',
@@ -53,12 +55,14 @@ export async function GET() {
         if (!latestRequest) {
             return NextResponse.json({
                 status: 'NONE',
+                accountName: session.user.name ?? null,
                 membership: null,
             });
         }
 
         return NextResponse.json({
             status: latestRequest.status,
+            accountName: session.user.name ?? null,
             membership: {
                 id: latestRequest.id,
                 fullName: latestRequest.fullName,

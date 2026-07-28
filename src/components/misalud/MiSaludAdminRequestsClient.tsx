@@ -24,7 +24,6 @@ import {
 } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import {
-    ArrowLeft,
     CheckCircle2,
     XCircle,
     Users,
@@ -458,29 +457,14 @@ const MiSaludAdminRequestsClient = ({ session }: Props) => {
                     <Card className="mb-8 bg-white/70 backdrop-blur-sm shadow-lg border border-white/20 overflow-hidden rounded-[28px]">
                         <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600">
                             <div className="p-6">
-                                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                                    <div>
-                                        <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
-                                            Mi Salud Admin
-                                        </h1>
-                                        <p className="text-white/85 text-lg">
-                                            Manage requests, members, and Assess
-                                            Health submissions
-                                        </p>
-                                    </div>
-
-                                    <Button
-                                        variant="light"
-                                        startContent={
-                                            <ArrowLeft className="w-4 h-4" />
-                                        }
-                                        className="h-12 px-6 bg-white/15 text-white border border-white/25 backdrop-blur-sm rounded-xl"
-                                        onPress={() =>
-                                            router.push('/dashboard')
-                                        }
-                                    >
-                                        Back to Dashboard
-                                    </Button>
+                                <div>
+                                    <h1 className="text-4xl lg:text-5xl font-black text-white mb-2">
+                                        Mi Salud Admin
+                                    </h1>
+                                    <p className="text-white/85 text-lg">
+                                        Manage requests, members, and Assess
+                                        Health submissions
+                                    </p>
                                 </div>
                             </div>
                         </div>

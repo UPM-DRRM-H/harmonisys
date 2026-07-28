@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { generateOtp } from '@/lib/otp';
 
+export const dynamic = 'force-dynamic';
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
@@ -14,10 +16,6 @@ const transporter = nodemailer.createTransport({
         rejectUnauthorized: false,
     },
 });
-
-// Add this line right after
-await transporter.verify();
-console.log('SMTP connected successfully');
 
 export async function POST(req: NextRequest) {
     try {

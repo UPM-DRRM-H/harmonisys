@@ -47,6 +47,10 @@ export type Question = {
 
 export type UrgencyLevel = 'red' | 'yellow' | 'green';
 
+export type WellnessDomainStatus = UrgencyLevel | 'pending';
+
+export type MemberOverallStatus = 'ready' | 'action' | 'urgent' | 'pending';
+
 export interface Recommendation {
     category: UrgencyLevel;
     questionId?: number;

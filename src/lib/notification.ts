@@ -140,7 +140,7 @@ export async function notifyNewPendingRequest(
             type: 'MISALUD_NEW_REQUEST' as const,
             title,
             message,
-            link: '/misalud/team-requests',
+            link: requestType === 'team' ? '/misalud/manage' : '/misalud/team-requests',
             refId: requestId,
             refType: 'MiSaludRequest',
         })),

@@ -477,7 +477,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                 ? `+${stats.recent.recentSubmissions} this month`
                 : '0 this month',
             color: toolTheme.misalud,
-            href: '/misalud',
+            href: isResponder ? '/misalud/team-requests' : '/misalud',
             status: 'operational' as const,
         },
         {
@@ -505,14 +505,14 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'Report Incident',
             description: 'Create new incident report',
             icon: <AlertTriangle className="w-6 h-6" />,
-            href: '/irs',
+            href: '/overview/irs?open=report',
             color: 'bg-gradient-to-r from-[#7A0C1E] to-[#B91C1C] hover:from-[#6B0F25] hover:to-[#991B1B] text-white shadow-xl hover:shadow-2xl',
         },
         {
             title: 'Health Assessment',
             description: 'Mi Salud health screening',
             icon: <Heart className="w-6 h-6" />,
-            href: '/misalud',
+            href: isResponder ? '/misalud/team-requests' : '/misalud',
             color: 'bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-800 hover:to-emerald-700 text-white shadow-xl hover:shadow-2xl',
         },
         {
@@ -534,7 +534,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     // Quick Actions visible by role:
     // - Standard: remove Health Assessment (Mi Salud)
     const quickActions = allQuickActions.filter((a) => {
-        if (isStandard && a.href === '/misalud') return false;
+        if (isStandard && a.title === 'Health Assessment') return false;
         return true;
     });
 
@@ -557,7 +557,7 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'Health Assessment',
             description: 'Mi Salud health screening',
             icon: <Heart className="w-6 h-6" />,
-            href: '/misalud',
+            href: '/misalud/team-requests',
             color: 'bg-gradient-to-r from-emerald-700 to-emerald-600 hover:from-emerald-800 hover:to-emerald-700 text-white shadow-xl hover:shadow-2xl',
         },
     ];
