@@ -86,7 +86,7 @@ function formatDateTime(value: string) {
 
 export default function MiSaludScreeningScheduler() {
     const queryClient = useQueryClient();
-    const { isOpen, onOpen, onOpenChange } = useDisclosure();
+    const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
 
     const initialValidDate = useMemo(() => {
         const today = new Date();
@@ -128,7 +128,7 @@ export default function MiSaludScreeningScheduler() {
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ['misalud-leader-screenings'] });
             resetForm();
-            onOpenChange(false);
+            onClose();
         },
         onError: (error: Error) => {
             setFormError(error.message);
@@ -267,7 +267,7 @@ export default function MiSaludScreeningScheduler() {
                 isOpen={isOpen}
                 onOpenChange={(open) => {
                     if (!open) resetForm();
-                    onOpenChange(open);
+                    onOpenChange();
                 }}
                 size="lg"
                 scrollBehavior="inside"
