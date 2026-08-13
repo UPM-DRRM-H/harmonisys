@@ -250,8 +250,6 @@ export default function MiSaludLeaderDashboard({ session: _session }: Props) {
         setSelectedScheduleId(null);
     };
 
-    // ── Render ───────────────────────────────────────────────────────────────
-
     return (
         <div className="min-h-screen bg-emerald-50">
             <div className="container mx-auto px-4 py-8 max-w-7xl">

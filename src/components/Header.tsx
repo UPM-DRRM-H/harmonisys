@@ -400,7 +400,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                             <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
                                 {mounted && session?.user && <NotificationBell />}
                                 {mounted && session?.user ? (
-                                    <Dropdown placement="bottom-end">
+                                    <Dropdown placement="bottom">
                                         <DropdownTrigger>
                                             <Button
                                                 variant="light"
@@ -748,7 +748,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                                                     }}
                                                                 >
                                                                     {icon}
-                                                                    <div className="flex flex-col min-w-0">
+                                                                      <div className="flex flex-col min-w-0">
                                                                         <span className="font-medium text-sm text-gray-900 truncate">
                                                                             {
                                                                                 tool.title

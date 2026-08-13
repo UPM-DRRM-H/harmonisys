@@ -1366,7 +1366,7 @@ const UserTable = () => {
                                                 <div className="flex flex-col items-center gap-3">
                                                     <h3 className="text-xl font-semibold text-slate-800">
                                                         No Users Found
-                                                    </h3>
+                                                    </h3> 
                                                 </div>
                                             </div>
                                         }
