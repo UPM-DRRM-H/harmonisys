@@ -11,9 +11,13 @@ import { prisma } from '@/lib/prisma';
 import { sendRoleApprovedEmail, sendRoleRejectedEmail } from '@/lib/email';
 import { UserType } from '@prisma/client';
 
+type RouteContext = {
+    params: Promise<{ id: string }>;
+};
+
 export async function PATCH(
     req: NextRequest,
-    props: { params: Promise<{ id: string }> }
+    context: RouteContext
 ) {
     // Auth guard (admin only)
     const session = await auth();
@@ -24,7 +28,7 @@ export async function PATCH(
         );
     }
 
-    const { id } = await props.params;
+    const { id } = await context.params;
     const body = await req.json().catch(() => ({}));
     const { action, reason } = body as {
         action: 'APPROVE' | 'REJECT';

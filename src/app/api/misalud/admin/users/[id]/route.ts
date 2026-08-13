@@ -7,9 +7,9 @@ type Params = {
     }>;
 };
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, context: Params) {
     try {
-        const { id } = await params;
+        const { id } = await context.params;
         const { teamName } = await req.json();
 
         if (!teamName?.trim()) {
@@ -50,9 +50,9 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(_req: Request, context: Params) {
     try {
-        const { id } = await params;
+        const { id } = await context.params;
 
         const membership = await prisma.miSaludMembership.findUnique({
             where: { id },

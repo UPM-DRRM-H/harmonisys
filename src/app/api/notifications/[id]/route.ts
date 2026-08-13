@@ -5,8 +5,8 @@ import { auth } from '@/lib/auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function PATCH(_req: Request, { params }: RouteContext) {
-    const { id } = await params;
+export async function PATCH(_req: Request, context: RouteContext) {
+    const { id } = await context.params;
     const session = await auth();
     if (!session?.user?.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -28,8 +28,8 @@ export async function PATCH(_req: Request, { params }: RouteContext) {
     return NextResponse.json({ notification: updated });
 }
 
-export async function DELETE(_req: Request, { params }: RouteContext) {
-    const { id } = await params;
+export async function DELETE(_req: Request, context: RouteContext) {
+    const { id } = await context.params;
     const session = await auth();
     if (!session?.user?.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

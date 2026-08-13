@@ -3,13 +3,17 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { UserType } from '@prisma/client';
 
+type RouteContext = {
+    params: Promise<{ id: string }>;
+};
+
 export async function DELETE(
     _req: Request,
-    props: { params: Promise<{ id: string }> }
+    context: RouteContext
 ) {
     try {
         const session = await auth();
-        const { id } = await props.params;
+        const { id } = await context.params;
 
         if (!session?.user?.id) {
             return NextResponse.json(

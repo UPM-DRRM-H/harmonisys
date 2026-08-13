@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 
+type RouteContext = {
+    params: Promise<{ id: string }>;
+};
+
 export async function GET(
     _req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    context: RouteContext
 ) {
     const session = await auth();
-    const { id } = await params;
+    const { id } = await context.params;
 
     if (!session?.user)
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,10 +27,10 @@ export async function GET(
 
 export async function PATCH(
     req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    context: RouteContext
 ) {
     const session = await auth();
-    const { id } = await params;
+    const { id } = await context.params;
 
     if (!session?.user)
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
