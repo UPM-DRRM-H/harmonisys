@@ -13,7 +13,7 @@ import { UserType } from '@prisma/client';
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    props: { params: Promise<{ id: string }> }
 ) {
     // Auth guard (admin only)
     const session = await auth();
@@ -24,7 +24,7 @@ export async function PATCH(
         );
     }
 
-    const { id } = await params;
+    const { id } = await props.params;
     const body = await req.json().catch(() => ({}));
     const { action, reason } = body as {
         action: 'APPROVE' | 'REJECT';

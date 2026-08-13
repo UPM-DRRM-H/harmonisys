@@ -5,11 +5,11 @@ import { UserType } from '@prisma/client';
 
 export async function DELETE(
     _req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    props: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await auth();
-        const { id } = await params;
+        const { id } = await props.params;
 
         if (!session?.user?.id) {
             return NextResponse.json(
