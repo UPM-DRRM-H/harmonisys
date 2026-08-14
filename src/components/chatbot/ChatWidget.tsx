@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button, Card, CardBody } from '@heroui/react';
 import {
     AlertTriangle,
     ChevronLeft,
+    Loader2,
     MessageCircle,
+    Send,
     ShieldCheck,
     X,
 } from 'lucide-react';
@@ -27,50 +29,49 @@ const CATEGORY_LABELS: Record<QuestionCategory, string> = {
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as QuestionCategory[];
 
+type ChatMessage = {
+    role: 'user' | 'assistant';
+    content: string;
+};
+
 const THEMES = {
     general: {
-        headerGradient:
-            'linear-gradient(135deg, #5B0A0A, #7A1111, #A11B1B)',
+        headerGradient: 'linear-gradient(135deg, #5B0A0A, #7A1111, #A11B1B)',
         userBubble: '#951515',
         accent: '#8B1538',
         alertBg: 'rgba(139, 21, 56, 0.10)',
         alertBorder: 'rgba(139, 21, 56, 0.20)',
     },
     irs: {
-        headerGradient:
-            'linear-gradient(135deg, #4A0A18, #6B0F25, #8B1538)',
+        headerGradient: 'linear-gradient(135deg, #4A0A18, #6B0F25, #8B1538)',
         userBubble: '#6B0F25',
         accent: '#8A002A',
         alertBg: 'rgba(74, 10, 24, 0.08)',
         alertBorder: 'rgba(74, 10, 24, 0.18)',
     },
     unahon: {
-        headerGradient:
-            'linear-gradient(135deg, #7A0C1E, #991B1B, #B91C1C)',
+        headerGradient: 'linear-gradient(135deg, #7A0C1E, #991B1B, #B91C1C)',
         userBubble: '#991B1B',
         accent: '#B40000',
         alertBg: 'rgba(185, 28, 28, 0.08)',
         alertBorder: 'rgba(185, 28, 28, 0.18)',
     },
     misalud: {
-        headerGradient:
-            'linear-gradient(135deg, #065F46, #047857, #10B981)',
+        headerGradient: 'linear-gradient(135deg, #065F46, #047857, #10B981)',
         userBubble: '#047857',
         accent: '#006745',
         alertBg: 'rgba(16, 185, 129, 0.10)',
         alertBorder: 'rgba(16, 185, 129, 0.22)',
     },
     hazardhunter: {
-        headerGradient:
-            'linear-gradient(135deg, #5A3A1A, #7B5A3A, #9D7C5A)',
+        headerGradient: 'linear-gradient(135deg, #5A3A1A, #7B5A3A, #9D7C5A)',
         userBubble: '#7B5A3A',
         accent: '#62380F',
         alertBg: 'rgba(90, 58, 26, 0.08)',
         alertBorder: 'rgba(90, 58, 26, 0.18)',
     },
     redas: {
-        headerGradient:
-            'linear-gradient(135deg, #1E3A8A, #1D4ED8, #0284C7)',
+        headerGradient: 'linear-gradient(135deg, #1E3A8A, #1D4ED8, #0284C7)',
         userBubble: '#1D4ED8',
         accent: '#0074AE',
         alertBg: 'rgba(2, 132, 199, 0.10)',
@@ -92,9 +93,11 @@ export default function ChatWidget() {
     const pathname = usePathname() || '/';
     const pageCategory = categoryFromPath(pathname);
     const [open, setOpen] = useState(false);
-    const [category, setCategory] =
-        useState<QuestionCategory>(pageCategory);
+    const [category, setCategory] = useState<QuestionCategory>(pageCategory);
     const [selected, setSelected] = useState<PredefinedQuestion | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const theme = THEMES[pageCategory];
 
@@ -105,12 +108,65 @@ export default function ChatWidget() {
     function chooseCategory(nextCategory: QuestionCategory) {
         setCategory(nextCategory);
         setSelected(null);
+        setMessages([]);
     }
 
     function handleOpen() {
         setCategory(pageCategory);
         setSelected(null);
+        setMessages([]);
+        setInput('');
         setOpen(true);
+    }
+
+    function resetConversation() {
+        setSelected(null);
+        setMessages([]);
+        setInput('');
+    }
+
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        const message = input.trim();
+        if (!message || isLoading) return;
+
+        const history = messages.slice(-6);
+        setSelected(null);
+        setMessages((current) => [
+            ...current,
+            { role: 'user', content: message },
+        ]);
+        setInput('');
+        setIsLoading(true);
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, pathname, history }),
+            });
+            const data = await response.json().catch(() => null);
+            const reply =
+                typeof data?.reply === 'string' && data.reply.trim()
+                    ? data.reply.trim()
+                    : 'The assistant is temporarily unavailable. Please try again or choose a suggested question.';
+
+            setMessages((current) => [
+                ...current,
+                { role: 'assistant', content: reply },
+            ]);
+        } catch {
+            setMessages((current) => [
+                ...current,
+                {
+                    role: 'assistant',
+                    content:
+                        'The assistant is temporarily unavailable. Please check your connection and try again.',
+                },
+            ]);
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     return (
@@ -148,7 +204,7 @@ export default function ChatWidget() {
                                         DRRM-H Quick Guide
                                     </p>
                                     <p className="text-[11px] text-white/80">
-                                        Predefined questions and answers
+                                        Quick answers with AI assistance
                                     </p>
                                 </div>
                             </div>
@@ -193,7 +249,7 @@ export default function ChatWidget() {
                                     <div>
                                         <button
                                             type="button"
-                                            onClick={() => setSelected(null)}
+                                            onClick={resetConversation}
                                             className="mb-4 flex items-center gap-1 text-xs font-semibold"
                                             style={{ color: theme.accent }}
                                         >
@@ -212,11 +268,61 @@ export default function ChatWidget() {
                                         <div
                                             className="max-w-[92%] rounded-2xl border bg-white px-3 py-3 text-sm leading-relaxed text-slate-800 shadow-sm"
                                             style={{
-                                                borderColor:
-                                                    theme.alertBorder,
+                                                borderColor: theme.alertBorder,
                                             }}
                                         >
                                             {selected.answer}
+                                        </div>
+                                    </div>
+                                ) : messages.length > 0 ? (
+                                    <div>
+                                        <button
+                                            type="button"
+                                            onClick={resetConversation}
+                                            disabled={isLoading}
+                                            className="mb-4 flex items-center gap-1 text-xs font-semibold disabled:opacity-50"
+                                            style={{ color: theme.accent }}
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                            Ask another question
+                                        </button>
+                                        <div className="space-y-3">
+                                            {messages.map((message, index) => (
+                                                <div
+                                                    key={`${message.role}-${index}`}
+                                                    className={
+                                                        message.role === 'user'
+                                                            ? 'ml-auto max-w-[88%] rounded-2xl px-3 py-2 text-sm text-white shadow-sm'
+                                                            : 'max-w-[92%] whitespace-pre-wrap rounded-2xl border bg-white px-3 py-3 text-sm leading-relaxed text-slate-800 shadow-sm'
+                                                    }
+                                                    style={
+                                                        message.role === 'user'
+                                                            ? {
+                                                                  backgroundColor:
+                                                                      theme.userBubble,
+                                                              }
+                                                            : {
+                                                                  borderColor:
+                                                                      theme.alertBorder,
+                                                              }
+                                                    }
+                                                >
+                                                    {message.content}
+                                                </div>
+                                            ))}
+                                            {isLoading && (
+                                                <div
+                                                    className="flex max-w-[92%] items-center gap-2 rounded-2xl border bg-white px-3 py-3 text-sm text-slate-600 shadow-sm"
+                                                    style={{
+                                                        borderColor:
+                                                            theme.alertBorder,
+                                                    }}
+                                                    role="status"
+                                                >
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Thinking…
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ) : (
@@ -283,8 +389,43 @@ export default function ChatWidget() {
                                 )}
                             </div>
 
-                            <div className="border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-center text-[11px] text-slate-500">
-                                No AI service or usage fee is required.
+                            <div className="border-t border-slate-200 bg-slate-50 px-4 py-3">
+                                <form
+                                    onSubmit={handleSubmit}
+                                    className="flex items-center gap-2"
+                                >
+                                    <input
+                                        type="text"
+                                        value={input}
+                                        onChange={(event) =>
+                                            setInput(event.target.value)
+                                        }
+                                        disabled={isLoading}
+                                        maxLength={2000}
+                                        placeholder="Ask about Harmonisys…"
+                                        aria-label="Ask the Harmonisys assistant"
+                                        className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={isLoading || !input.trim()}
+                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                                        style={{
+                                            backgroundColor: theme.userBubble,
+                                        }}
+                                        aria-label="Send question"
+                                    >
+                                        {isLoading ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Send className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </form>
+                                <p className="mt-2 text-center text-[11px] text-slate-500">
+                                    Suggested questions use verified predefined
+                                    answers.
+                                </p>
                             </div>
                         </CardBody>
                     </Card>

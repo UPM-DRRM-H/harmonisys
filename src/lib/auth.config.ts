@@ -18,6 +18,7 @@ const config: NextAuthConfig = {
                 const password = credentials?.password as string | undefined;
 
                 if (!email || !password) {
+                    console.info('[credentials-authorize] missing_credentials');
                     return null;
                 }
 
@@ -25,16 +26,24 @@ const config: NextAuthConfig = {
                     where: { email },
                 });
 
-                if (!user || !user.password) {
+                if (!user) {
+                    console.info('[credentials-authorize] user_not_found');
+                    return null;
+                }
+
+                if (!user.password) {
+                    console.info('[credentials-authorize] password_missing');
                     return null;
                 }
 
                 const isValid = await bcrypt.compare(password, user.password);
 
                 if (!isValid) {
+                    console.info('[credentials-authorize] password_mismatch');
                     return null;
                 }
 
+                console.info('[credentials-authorize] success');
                 return user;
             },
         }),

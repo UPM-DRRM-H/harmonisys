@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         const { fullName, age, address, requestedRole, teamName, teamId } =
             body;
 
-        if (!fullName || !age || !requestedRole) {
+        if (!fullName || !age || !address?.trim() || !requestedRole) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }

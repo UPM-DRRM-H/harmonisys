@@ -3,7 +3,6 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Header from '@/components/Header';
 import MiSaludLeaderDashboard from '@/components/misalud/MiSaludLeaderDashboard';
-import MiSaludLeaderRequestsClient from '@/components/misalud/MiSaludLeaderRequestsClient';
 import MiSaludMemberDashboard from '@/components/misalud/MiSaludMemberDashboard';
 import MiSaludRegistrationGate from '@/components/misalud/MiSaludRegistrationGate';
 
@@ -18,14 +17,8 @@ const MiSaludTeamRequestsPage = async () => {
         redirect('/overview/misalud');
     }
 
-    // Admins get the admin requests client
     if (session.user.role === 'ADMIN') {
-        return (
-            <div>
-                <Header session={session} />
-                <MiSaludLeaderRequestsClient session={session} />
-            </div>
-        );
+        redirect('/misalud/manage');
     }
 
     // RESPONDER: check their membership status

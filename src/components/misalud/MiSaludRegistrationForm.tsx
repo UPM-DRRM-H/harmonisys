@@ -24,9 +24,14 @@ const roleOptions = [
     { key: 'TEAM_MEMBER', label: 'Team Member' },
 ];
 
-const MiSaludRegistrationForm = ({ onSuccess, onCancel, defaultName }: Props) => {
+const MiSaludRegistrationForm = ({
+    onSuccess,
+    onCancel,
+    defaultName,
+}: Props) => {
     const [fullName, setFullName] = useState(defaultName ?? '');
     const [age, setAge] = useState('');
+    const [address, setAddress] = useState('');
     const [requestedRole, setRequestedRole] = useState<
         'TEAM_LEADER' | 'TEAM_MEMBER' | ''
     >('');
@@ -64,6 +69,7 @@ const MiSaludRegistrationForm = ({ onSuccess, onCancel, defaultName }: Props) =>
             const payload = {
                 fullName,
                 age: Number(age),
+                address: address.trim(),
                 requestedRole,
                 teamName:
                     requestedRole === 'TEAM_LEADER' ? teamName : undefined,
@@ -119,6 +125,15 @@ const MiSaludRegistrationForm = ({ onSuccess, onCancel, defaultName }: Props) =>
                 isRequired
                 variant="bordered"
                 min={1}
+            />
+
+            <Input
+                label="Address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                isRequired
+                variant="bordered"
+                placeholder="Enter your current address"
             />
 
             <Select

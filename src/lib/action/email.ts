@@ -28,7 +28,6 @@ export async function sendMail({
     );
     console.log('[sendMail] from:', process.env.SMTP_USER);
 
-    // ❌ Remove this line — it's an extra SMTP round-trip that can hang
     // await transporter.verify();
 
     const info = await transporter.sendMail({
