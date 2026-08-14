@@ -11,10 +11,9 @@ async function getLeaderTeam(userId: string) {
     });
 }
 
-// GET /api/misalud/leader/screenings
 // Returns screening schedules for the leader's team, descending by createdAt
 export async function GET() {
-    try {
+    try { 
         const session = await auth();
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,7 +36,6 @@ export async function GET() {
     }
 }
 
-// POST /api/misalud/leader/screenings
 // Creates a new screening schedule for the leader's team
 export async function POST(req: Request) {
     try {

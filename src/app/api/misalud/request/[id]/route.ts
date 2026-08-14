@@ -89,9 +89,13 @@ async function notifyTeamRejected(
 
 // ── PATCH — approve or reject a request ───────────────────────────────────
 
+type RouteContext = {
+    params: Promise<{ id: string }>;
+};
+
 export async function PATCH(
     req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    context: RouteContext
 ) {
     const session = await auth();
 
@@ -104,8 +108,10 @@ export async function PATCH(
         rejectionReason?: string;
     };
 
+    const { id } = await context.params;
+
     const request = await prisma.miSaludRequest.findUnique({
-        where: { id: (await params).id },
+        where: { id },
         include: { user: true, team: true },
     });
 
@@ -115,7 +121,7 @@ export async function PATCH(
 
     // ── 1. Persist the status change ────────────────────────────────────────
     const updated = await prisma.miSaludRequest.update({
-        where: { id: (await params).id },
+        where: { id },
         data: {
             status: body.status,
             rejectionReason: body.rejectionReason ?? null,

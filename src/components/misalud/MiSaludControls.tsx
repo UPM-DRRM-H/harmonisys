@@ -27,7 +27,7 @@ export default function MiSaludControls({
     showLeaderActions = false,
     onLeaderRequestsClick,
 }: MiSaludControlsProps) {
-    // ── Pending badge ─────────────────────────────────────────────────────────
+    // ── Pending badge ──────────────────────────────────────────────────────
     const { data: pendingData } = usePendingRequestsCount();
     const pendingCount = pendingData?.count ?? 0;
 
