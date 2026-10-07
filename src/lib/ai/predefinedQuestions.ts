@@ -164,7 +164,7 @@ export const PREDEFINED_QUESTIONS: PredefinedQuestion[] = [
         id: 'contact',
         category: 'general',
         question: 'How do I contact DRRM-H?',
-        answer: 'Open Contact, enter your reply email and message, then choose Send Message. Inquiries are directed to drrmh.upm@up.edu.ph. The confirmation distinguishes a sent message from a saved message queued for delivery. This inbox is for inquiries and coordination, not emergency dispatch.',
+        answer: 'Open Contact, enter your reply email and message, then choose Send Message. Inquiries are directed to drrmh.upm@up.edu.ph. A receipt is emailed to the address you enter after the inquiry is sent. Check your Inbox or Spam; this form does not send through your personal Gmail account. The confirmation distinguishes sent messages from queued delivery. This inbox is for inquiries and coordination, not emergency dispatch.',
         keywords: [
             'contact',
             'inquiry',

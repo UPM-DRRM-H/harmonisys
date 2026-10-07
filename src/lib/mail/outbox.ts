@@ -76,6 +76,25 @@ export async function deliverEmail(id: string) {
                         '</p>',
                 });
                 break;
+            case 'CONTACT_RECEIPT': {
+                const parent = await prisma.emailDelivery.findUnique({
+                    where: { id: payload.contactDeliveryId },
+                    select: { status: true, kind: true, payload: true },
+                });
+                if (parent?.kind !== 'CONTACT' || parent.status !== 'SENT' ||
+                    (parent.payload as any)?.email !== payload.email)
+                    throw new Error('The inquiry has not been delivered yet.');
+                await sendCheckedMail({
+                    from: mailFrom(), to: payload.email, replyTo: ADMIN_INBOX,
+                    subject: 'Your Harmonisys inquiry receipt',
+                    text: 'Your inquiry was sent to ' + ADMIN_INBOX +
+                        '. Reply to this email to follow up.\n\nYour message:\n' + payload.text,
+                    html: '<p>Your inquiry was sent to ' + ADMIN_INBOX +
+                        '. Reply to this email to follow up.</p><p><strong>Your message:</strong></p><p>' +
+                        escapeEmailHtml(payload.text).replace(/\n/g, '<br>') + '</p>',
+                });
+                break;
+            }
             default:
                 throw new Error('Unknown email delivery kind.');
         }

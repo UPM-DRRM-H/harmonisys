@@ -75,8 +75,10 @@ const ContactCard = () => {
             setResultSuccess(true);
             setResultMessage(
                 delivery.delivered
-                    ? 'Your message was sent successfully. Thank you!'
-                    : 'Your inquiry was saved and queued for email delivery. Thank you!'
+                    ? delivery.receiptDelivered
+                        ? `Your message was sent to drrmh.upm@up.edu.ph. A receipt was emailed to ${email}. Check your Inbox or Spam.`
+                        : 'Your message was sent to drrmh.upm@up.edu.ph. Your email receipt is queued for delivery.'
+                    : 'Your inquiry was saved and queued. We will email your receipt after the inquiry is sent to DRRM-H.' 
             );
             setEmail('');
             setMessage('');

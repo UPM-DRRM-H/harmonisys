@@ -13,7 +13,7 @@ export async function sendMail({
     email = normalizeEmail(email);
     if (typeof text !== 'string' || !text.trim() || text.length > 10000)
         throw new WorkflowError('Enter a message of 1–10,000 characters.');
-    const delivery = await prisma.$transaction(async (tx) => {
+    const { delivery, receipt } = await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${email}))`;
         const recent = await tx.emailDelivery.count({
             where: {
@@ -49,7 +49,13 @@ export async function sendMail({
                     refType: 'EmailDelivery',
                 })),
             });
-        return delivery;
+        const receipt = await enqueueEmail(tx, 'contact-receipt:' + delivery.id,
+            'CONTACT_RECEIPT', { email, text: text.trim(), contactDeliveryId: delivery.id });
+        return { delivery, receipt };
     });
-    return { success: true, delivered: await deliverEmail(delivery.id) };
+    const delivered = await deliverEmail(delivery.id).catch(() => false);
+    const receiptDelivered = delivered
+        ? await deliverEmail(receipt.id).catch(() => false)
+        : false;
+    return { success: true, delivered, receiptDelivered };
 }
