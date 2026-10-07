@@ -1,5 +1,5 @@
 /* Harmonisys public-shell worker. Authenticated pages, records and writes are NEVER cached. */
-const CACHE='harmonisys-public-20261007-v1';
+const CACHE='harmonisys-public-20261007-v2';
 const PUBLIC_ASSETS=['/offline.html','/pwa/guide.json','/icons/app-192.png','/icons/app-512.png','/icons/apple-touch-icon.png'];
 const LOCAL=['localhost','127.0.0.1','[::1]'].includes(self.location.hostname);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PUBLIC_ASSETS))));
