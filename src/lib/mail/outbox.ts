@@ -19,6 +19,18 @@ export async function enqueueEmail(
     });
 }
 export async function deliverEmail(id: string) {
+    const candidate = await prisma.emailDelivery.findUnique({
+        where: { id }, select: { kind: true, payload: true },
+    });
+    if (candidate?.kind === 'CONTACT_RECEIPT') {
+        const receipt = candidate.payload as any;
+        const parent = await prisma.emailDelivery.findUnique({
+            where: { id: receipt.contactDeliveryId },
+            select: { kind: true, status: true },
+        });
+        // Waiting on the office is not a failed delivery attempt.
+        if (parent?.kind !== 'CONTACT' || parent.status !== 'SENT') return false;
+    }
     const now = new Date();
     const claimed = await prisma.emailDelivery.updateMany({
         where: {

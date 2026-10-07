@@ -211,7 +211,7 @@ const ContactCard = () => {
                                 </h4>
 
                                 <p className="text-rose-100/80 mb-4 text-sm">
-                                    Report an emergency or give us feedback.
+                                    Send an inquiry or feedback and receive an email receipt.
                                 </p>
 
                                 <form
