@@ -11,6 +11,6 @@ export async function GET(request: Request) {
     if (!expected || Buffer.byteLength(actual) !== Buffer.byteLength(expected) ||
         !timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))
         return NextResponse.json({error:'Unauthorized'},{status:401});
-    try { return NextResponse.json(await retryPendingEmails(3)); }
+    try { return NextResponse.json(await retryPendingEmails(1)); }
     catch { return NextResponse.json({error:'Email retry unavailable'},{status:503}); }
 }
