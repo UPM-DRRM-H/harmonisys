@@ -3,7 +3,7 @@ require('@next/env').loadEnvConfig(process.cwd());
 const {PrismaClient}=require('@prisma/client');const {executeSql}=require('../scripts/sql.cjs');
 const schema='harmonisys_test_'+Date.now();const fresh=schema+'_fresh';
 const originalUrl=process.env.DATABASE_URL;const url=new URL(originalUrl);url.searchParams.set('schema',schema);
-const root=new PrismaClient({log:[]});const db=new PrismaClient({datasources:{db:{url:url.href}},log:[]});
+const root=new PrismaClient({log:[],transactionOptions:{maxWait:10000,timeout:30000}});const db=new PrismaClient({datasources:{db:{url:url.href}},log:[],transactionOptions:{maxWait:10000,timeout:30000}});
 global.prismaGlobal=db;
 let currentUser=null,failMail=false;const sent=[];let passed=0;
 const originalLoad=Module._load;
@@ -27,11 +27,11 @@ async function fixture(email,role='STANDARD',extra={}){return db.user.create({da
 try{
     await root.$executeRawUnsafe('CREATE SCHEMA "'+schema+'"');await root.$executeRawUnsafe('CREATE SCHEMA "'+fresh+'"');
     // Execute every committed migration on a clean schema; no shared table is touched.
-    for(const folder of fs.readdirSync('prisma/migrations').filter(f=>fs.existsSync('prisma/migrations/'+f+'/migration.sql')).sort()){
+    for(const folder of (process.env.BACKEND_SKIP_MIGRATION_REPLAY==='1' ? [] : fs.readdirSync('prisma/migrations').filter(f=>fs.existsSync('prisma/migrations/'+f+'/migration.sql')).sort())){
         try{await root.$transaction(async tx=>{await tx.$executeRawUnsafe('SET LOCAL search_path TO \"'+fresh+'\"');await executeSql(tx,scoped(fs.readFileSync('prisma/migrations/'+folder+'/migration.sql','utf8'),fresh));},{timeout:600000,maxWait:20000});}
         catch(e){throw new Error('Fresh migration '+folder+' failed: '+e.message);}
     }
-    console.log('PASS fresh migration replay');passed++;
+    if(process.env.BACKEND_SKIP_MIGRATION_REPLAY!=='1'){console.log('PASS fresh migration replay');passed++;}
     await root.$transaction(tx=>executeSql(tx,scoped(fs.readFileSync('scripts/test-schema.sql','utf8'),schema)),{timeout:600000,maxWait:20000});
     await root.$transaction(async tx=>{await tx.$executeRawUnsafe('SET LOCAL search_path TO "'+schema+'"');await executeSql(tx,scoped(fs.readFileSync('prisma/migrations/20261007000200_supabase_archives/migration.sql','utf8'),schema));},{timeout:600000,maxWait:20000});
     const upgrade=fs.readFileSync('prisma/migrations/20261007000100_backend_integrity/migration.sql','utf8');

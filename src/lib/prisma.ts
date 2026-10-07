@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {
     return new PrismaClient({
+        transactionOptions: { maxWait: 10000, timeout: 30000 },
         datasources: {
             db: {
                 url: process.env.DATABASE_URL,
