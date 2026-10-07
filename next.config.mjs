@@ -6,6 +6,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     outputFileTracingRoot: __dirname,
+    // Hosted functions use the Linux engine; keep the Windows engine local.
+    outputFileTracingExcludes: {
+        '/*': ['**/query_engine-windows.dll.node'],
+    },
     eslint: {
         ignoreDuringBuilds: true,
     },
