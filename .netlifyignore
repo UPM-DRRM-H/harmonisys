@@ -1,0 +1,8 @@
+.env
+.env.*
+.private-operations/**
+docs/**
+tests/**
+presentation-video/**
+tmp/**
+.git/**

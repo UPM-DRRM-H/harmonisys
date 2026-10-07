@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Read-only user-manual extraction and rendered reference pages
 /tmp/manual/
+
+# Netlify local build state
+/.netlify/

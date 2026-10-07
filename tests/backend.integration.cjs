@@ -28,14 +28,14 @@ try{
     await root.$executeRawUnsafe('CREATE SCHEMA "'+schema+'"');await root.$executeRawUnsafe('CREATE SCHEMA "'+fresh+'"');
     // Execute every committed migration on a clean schema; no shared table is touched.
     for(const folder of fs.readdirSync('prisma/migrations').filter(f=>fs.existsSync('prisma/migrations/'+f+'/migration.sql')).sort()){
-        try{await root.$transaction(async tx=>{await tx.$executeRawUnsafe('SET LOCAL search_path TO \"'+fresh+'\"');await executeSql(tx,scoped(fs.readFileSync('prisma/migrations/'+folder+'/migration.sql','utf8'),fresh));},{timeout:180000});}
+        try{await root.$transaction(async tx=>{await tx.$executeRawUnsafe('SET LOCAL search_path TO \"'+fresh+'\"');await executeSql(tx,scoped(fs.readFileSync('prisma/migrations/'+folder+'/migration.sql','utf8'),fresh));},{timeout:600000,maxWait:20000});}
         catch(e){throw new Error('Fresh migration '+folder+' failed: '+e.message);}
     }
     console.log('PASS fresh migration replay');passed++;
-    await root.$transaction(tx=>executeSql(tx,scoped(fs.readFileSync('scripts/test-schema.sql','utf8'),schema)),{timeout:180000});
-    await root.$transaction(async tx=>{await tx.$executeRawUnsafe('SET LOCAL search_path TO "'+schema+'"');await executeSql(tx,scoped(fs.readFileSync('prisma/migrations/20261007000200_supabase_archives/migration.sql','utf8'),schema));},{timeout:180000,maxWait:20000});
+    await root.$transaction(tx=>executeSql(tx,scoped(fs.readFileSync('scripts/test-schema.sql','utf8'),schema)),{timeout:600000,maxWait:20000});
+    await root.$transaction(async tx=>{await tx.$executeRawUnsafe('SET LOCAL search_path TO "'+schema+'"');await executeSql(tx,scoped(fs.readFileSync('prisma/migrations/20261007000200_supabase_archives/migration.sql','utf8'),schema));},{timeout:600000,maxWait:20000});
     const upgrade=fs.readFileSync('prisma/migrations/20261007000100_backend_integrity/migration.sql','utf8');
-    await root.$transaction(tx=>executeSql(tx,scoped(upgrade.slice(upgrade.indexOf('-- Bind historical')),schema)),{timeout:180000});
+    await root.$transaction(tx=>executeSql(tx,scoped(upgrade.slice(upgrade.indexOf('-- Bind historical')),schema)),{timeout:600000,maxWait:20000});
     const otp=require('../src/lib/otp.ts'),registration=require('../src/lib/registration.ts'),roles=require('../src/lib/roleRequests.ts');
     const membership=require('../src/lib/misaludRequests.ts'),outbox=require('../src/lib/mail/outbox.ts');
     const admin=await fixture('admin@example.invalid','ADMIN',{mhpssLevel:'LEVEL_4'}),admin2=await fixture('admin2@example.invalid','ADMIN');
