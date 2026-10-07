@@ -1,7 +1,8 @@
+import { withAccess } from '@/lib/apiAccess';
 import { getAllUsers } from '@/lib/action/user';
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get('page');
     const limit = searchParams.get('limit');
@@ -20,3 +21,5 @@ export async function GET(request: Request) {
 
     return NextResponse.json(users);
 }
+
+export const GET = withAccess(handleGET, ['ADMIN']);

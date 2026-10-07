@@ -26,6 +26,7 @@ import type { QuestionnaireFormData, QuestionnaireResponses } from '@/types';
 import { DateValue, CalendarDate } from '@internationalized/date';
 
 interface QuestionnaireProps {
+    scheduleId?: string;
     onClose?: () => void;
     openSuccessModal: () => void;
     approvedTeamName?: string;
@@ -39,6 +40,7 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({
     onClose,
     openSuccessModal,
     approvedTeamName,
+    scheduleId,
     handleRecommendations,
 }) => {
     const [responses, setResponses] = useState<QuestionnaireResponses>({});
@@ -100,6 +102,8 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({
         try {
             // Convert Date to ISO string for API submission
             const submissionData = {
+                scheduleId,
+                mode: scheduleId ? 'scheduled' : 'general',
                 formData: {
                     ...formData,
                     date: formData.date.toISOString(),

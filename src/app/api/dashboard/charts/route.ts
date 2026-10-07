@@ -1,3 +1,8 @@
+import {
+    reportingMonths,
+    reportingMonthKey,
+    reportingStart,
+} from '@/lib/chartData';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
@@ -34,50 +39,30 @@ export async function GET() {
             );
         }
 
+        if (currentUser.role === UserType.STANDARD)
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'Analytics require approved Responder or Admin access.',
+                    data: null,
+                },
+                { status: 403 }
+            );
         const isAdmin = currentUser.role === UserType.ADMIN;
 
-        const twelveMonthsAgo = new Date();
-        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+        const twelveMonthsAgo = reportingStart();
 
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        const userAliases = [
-            currentUser.name?.trim(),
-            currentUser.email?.trim(),
-        ].filter(Boolean) as string[];
-
-        const incidentWhere = isAdmin
-            ? { createdAt: { gte: twelveMonthsAgo } }
-            : {
-                  AND: [
-                      { createdAt: { gte: twelveMonthsAgo } },
-                      {
-                          OR: userAliases.map((alias) => ({
-                              reporter: {
-                                  equals: alias,
-                                  mode: 'insensitive' as const,
-                              },
-                          })),
-                      },
-                  ],
-              };
-
-        const incidentRecentWhere = isAdmin
-            ? { createdAt: { gte: sevenDaysAgo } }
-            : {
-                  AND: [
-                      { createdAt: { gte: sevenDaysAgo } },
-                      {
-                          OR: userAliases.map((alias) => ({
-                              reporter: {
-                                  equals: alias,
-                                  mode: 'insensitive' as const,
-                              },
-                          })),
-                      },
-                  ],
-              };
+        const incidentWhere = {
+            createdAt: { gte: twelveMonthsAgo },
+            ...(isAdmin ? {} : { userId: currentUser.id }),
+        };
+        const incidentRecentWhere = {
+            createdAt: { gte: sevenDaysAgo },
+            ...(isAdmin ? {} : { userId: currentUser.id }),
+        };
 
         const unahonWhere = isAdmin
             ? { date: { gte: twelveMonthsAgo } }
@@ -122,32 +107,21 @@ export async function GET() {
 
         // ── Build last 12 month slots ────────────────────────────────────────
 
-        const months: MonthData[] = [];
-        const currentDate = new Date(twelveMonthsAgo);
-
-        for (let i = 0; i < 12; i++) {
-            const monthKey = currentDate.toISOString().slice(0, 7);
-            months.push({
-                month: monthKey,
-                label: currentDate.toLocaleDateString('en-US', {
-                    month: 'short',
-                    year: 'numeric',
-                }),
-                incidents: 0,
-                unahon: 0,
-                submissions: 0,
-            });
-            currentDate.setMonth(currentDate.getMonth() + 1);
-        }
+        const months: MonthData[] = reportingMonths().map((month) => ({
+            ...month,
+            incidents: 0,
+            unahon: 0,
+            submissions: 0,
+        }));
 
         monthlyIncidents.forEach((item) => {
-            const monthKey = item.createdAt.toISOString().slice(0, 7);
+            const monthKey = reportingMonthKey(item.createdAt);
             const idx = months.findIndex((m) => m.month === monthKey);
             if (idx !== -1) months[idx].incidents += 1;
         });
 
         monthlyUnahon.forEach((item) => {
-            const monthKey = item.date.toISOString().slice(0, 7);
+            const monthKey = reportingMonthKey(item.date);
             const idx = months.findIndex((m) => m.month === monthKey);
             if (idx !== -1) months[idx].unahon += 1;
         });
@@ -162,11 +136,7 @@ export async function GET() {
 
         const incidentFilterWhere = isAdmin
             ? undefined
-            : {
-                  OR: userAliases.map((alias) => ({
-                      reporter: { equals: alias, mode: 'insensitive' as const },
-                  })),
-              };
+            : { userId: currentUser.id };
 
         const categoryDistribution = await prisma.incident.groupBy({
             by: ['category'],
@@ -183,6 +153,7 @@ export async function GET() {
         const userRoleDistribution = isAdmin
             ? await prisma.user.groupBy({
                   by: ['role'],
+                  where: { active: true },
                   _count: { role: true },
               })
             : [];
@@ -290,6 +261,7 @@ export async function GET() {
                 ],
             },
             distributions: {
+                severity: [],
                 category: categoryDistribution.map((item) => ({
                     name: item.category,
                     value: item._count.category,

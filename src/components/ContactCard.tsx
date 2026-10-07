@@ -71,9 +71,13 @@ const ContactCard = () => {
 
         setLoading(true);
         try {
-            await sendMail({ email, text: message });
+            const delivery = await sendMail({ email, text: message });
             setResultSuccess(true);
-            setResultMessage('Your message was sent successfully. Thank you!');
+            setResultMessage(
+                delivery.delivered
+                    ? 'Your message was sent successfully. Thank you!'
+                    : 'Your inquiry was saved and queued for email delivery. Thank you!'
+            );
             setEmail('');
             setMessage('');
         } catch (err) {
@@ -225,7 +229,7 @@ const ContactCard = () => {
                                         }
                                         required
                                         classNames={{
-                                            inputWrapper: 'h-14', 
+                                            inputWrapper: 'h-14',
                                         }}
                                     />
 
@@ -241,7 +245,7 @@ const ContactCard = () => {
                                         className="flex-1"
                                         classNames={{
                                             inputWrapper: 'flex-1',
-                                            input: 'h-full min-h-[175px]', 
+                                            input: 'h-full min-h-[175px]',
                                         }}
                                     />
 

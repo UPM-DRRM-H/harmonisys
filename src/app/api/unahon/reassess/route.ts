@@ -1,68 +1,72 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireUser } from '@/lib/access';
 import { prisma } from '@/lib/prisma';
-import { UserType, UnahonReassessmentStatus } from '@prisma/client';
-
+import { WorkflowError } from '@/lib/validation';
 export async function POST(req: Request) {
     try {
-        const session = await auth();
-
-        if (!session) {
-            return NextResponse.json(
-                { error: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-
-        if (session.user.role !== UserType.ADMIN) {
-            return NextResponse.json({ error: 'Admin only' }, { status: 403 });
-        }
-
-        const body = await req.json();
-        const { userId, client, affiliation } = body;
-
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'User ID is required' },
-                { status: 400 }
-            );
-        }
-
-        const existingPending =
-            await prisma.unahonReassessmentRequest.findFirst({
+        const admin = await requireUser(['ADMIN']);
+        const { userId, client, affiliation } = await req.json();
+        if (
+            typeof userId !== 'string' ||
+            typeof client !== 'string' ||
+            !client.trim()
+        )
+            throw new WorkflowError('Choose a responder and existing patient.');
+        const request = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'reassess:' + userId}))`;
+            const user = await tx.user.findFirst({
                 where: {
-                    userId,
-                    status: UnahonReassessmentStatus.PENDING,
+                    id: userId,
+                    active: true,
+                    role: { in: ['ADMIN', 'RESPONDER'] },
+                    mhpssLevel: { not: null },
                 },
             });
-
-        if (existingPending) {
-            return NextResponse.json({
-                success: true,
-                request: existingPending,
-                message: 'User already has a pending reassessment request.',
+            if (!user)
+                throw new WorkflowError(
+                    'Choose an active responder with MHPSS competency.'
+                );
+            if (!(await tx.unahon.findFirst({ where: { client } })))
+                throw new WorkflowError('Patient has no initial assessment.');
+            const pending = await tx.unahonReassessmentRequest.findFirst({
+                where: { userId, status: 'PENDING' },
             });
-        }
-
-        const request = await prisma.unahonReassessmentRequest.create({
-            data: {
-                userId,
-                requestedById: session.user.id,
-                client,
-                affiliation,
-            },
+            if (pending)
+                throw new WorkflowError(
+                    'Responder already has a pending reassessment.',
+                    409
+                );
+            const request = await tx.unahonReassessmentRequest.create({
+                data: {
+                    userId,
+                    client,
+                    affiliation:
+                        typeof affiliation === 'string' ? affiliation : null,
+                    requestedById: admin.id,
+                },
+            });
+            await tx.notification.create({
+                data: {
+                    userId,
+                    type: 'GENERAL',
+                    title: 'Reassessment requested',
+                    message:
+                        'An admin assigned a reassessment for ' + client + '.',
+                    link: '/unahon',
+                    refId: request.id,
+                    refType: 'UnahonReassessmentRequest',
+                },
+            });
+            return request;
         });
-
-        return NextResponse.json({
-            success: true,
-            request,
-        });
-    } catch (error) {
-        console.error('Reassessment request error:', error);
-
+        return NextResponse.json({ success: true, request });
+    } catch (e) {
         return NextResponse.json(
-            { error: 'Failed to create reassessment request' },
-            { status: 500 }
+            {
+                error:
+                    e instanceof WorkflowError ? e.message : 'Request failed.',
+            },
+            { status: e instanceof WorkflowError ? e.status : 500 }
         );
     }
 }

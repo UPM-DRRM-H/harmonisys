@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireUser } from '@/lib/access';
 
 export const savePlaceCoordinates = async (
     place: string,
@@ -9,6 +10,7 @@ export const savePlaceCoordinates = async (
     lng: number
 ) => {
     try {
+        await requireUser();
         await prisma.placeCoordinate.upsert({
             where: { place },
             update: { latitude: lat, longitude: lng, count },
@@ -21,6 +23,7 @@ export const savePlaceCoordinates = async (
 
 export const getAllPlaceCoordinates = async () => {
     try {
+        await requireUser();
         const coordinates = await prisma.placeCoordinate.findMany();
         return coordinates;
     } catch (error) {

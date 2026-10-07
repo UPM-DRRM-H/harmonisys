@@ -1,52 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendPasswordResetEmail } from '@/lib/action/email';
-import crypto from 'crypto';
-
+import { normalizeEmail } from '@/lib/validation';
+import { verificationHash } from '@/lib/otp';
+import { sendPasswordResetEmail } from '@/lib/mail/passwordReset';
+import { randomBytes } from 'node:crypto';
 export async function POST(req: NextRequest) {
     try {
-        const { email } = await req.json();
-
-        if (!email) {
-            return NextResponse.json(
-                { error: 'Email is required.' },
-                { status: 400 }
-            );
-        }
-
-        const user = await prisma.user.findUnique({ where: { email } });
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'No account found with that email address.' },
-                { status: 404 }
-            );
-        }
-
-        // Delete any existing reset tokens for this email
-        await prisma.verificationToken.deleteMany({
-            where: { identifier: `reset:${email}` },
-        });
-
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
-
-        await prisma.verificationToken.create({
-            data: {
-                identifier: `reset:${email}`,
-                token,
-                expires,
+        const email = normalizeEmail((await req.json()).email);
+        const user = await prisma.user.findFirst({
+            where: {
+                email: { equals: email, mode: 'insensitive' },
+                active: true,
             },
+            select: { email: true },
         });
-
-        await sendPasswordResetEmail(email, token);
-
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error('[forgot-password]', error);
+        const token = randomBytes(32).toString('hex');
+        const shouldSend =
+            user &&
+            (await prisma.$transaction(async (tx) => {
+                await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'reset:' + email}))`;
+                const recent = await tx.verificationToken.findFirst({
+                    where: {
+                        identifier: 'reset:' + user.email,
+                        expires: { gt: new Date(Date.now() + 3540000) },
+                    },
+                });
+                if (recent) return false;
+                await tx.verificationToken.deleteMany({
+                    where: { identifier: 'reset:' + user.email },
+                });
+                await tx.verificationToken.create({
+                    data: {
+                        identifier: 'reset:' + user.email,
+                        token: verificationHash(token),
+                        expires: new Date(Date.now() + 3600000),
+                    },
+                });
+                return true;
+            }));
+        if (shouldSend)
+            await sendPasswordResetEmail(user!.email, token).catch(() => {});
+        return NextResponse.json({
+            success: true,
+            message: 'If an account exists, a reset email will be sent.',
+        });
+    } catch {
         return NextResponse.json(
-            { error: 'Something went wrong.' },
-            { status: 500 }
+            { error: 'Enter a valid email address.' },
+            { status: 400 }
         );
     }
 }

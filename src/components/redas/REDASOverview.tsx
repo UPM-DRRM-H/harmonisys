@@ -146,6 +146,7 @@ const REDASOverview = ({
     const [aggregatedData, setAggregatedData] =
         useState<AggregatedData>(emptyData);
     const [loading, setLoading] = useState(false);
+    const [dataError, setDataError] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
 
     const autoplayRef = useRef(
@@ -215,14 +216,33 @@ const REDASOverview = ({
 
         const fetchData = async () => {
             setLoading(true);
+            setDataError(false);
             try {
                 const response = await fetch(
                     `/api/redas?sheetName=Participants`
                 );
+                if (!response.ok) throw new Error('REDAS source unavailable.');
                 const result = await response.json();
+                if (
+                    !result ||
+                    ![
+                        'totalParticipants',
+                        'totalMale',
+                        'totalFemale',
+                        'totalYouth',
+                        'totalSC',
+                        'totalPWD',
+                    ].every(
+                        (key) =>
+                            typeof result[key] === 'number' &&
+                            Number.isFinite(result[key]) &&
+                            result[key] >= 0
+                    )
+                )
+                    throw new Error('REDAS returned an invalid dataset.');
                 setAggregatedData(result || emptyData);
             } catch (error) {
-                console.error('Error fetching places:', error);
+                setDataError(true);
             } finally {
                 setLoading(false);
             }
@@ -650,6 +670,15 @@ const REDASOverview = ({
                                     </Card>
                                 ))}
                             </div>
+                        ) : dataError ? (
+                            <p
+                                role="alert"
+                                className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"
+                            >
+                                Training statistics could not be loaded.
+                                Reconnect and reload this page; unavailable data
+                                is not a zero count.
+                            </p>
                         ) : (
                             <ParticipantCharts data={aggregatedData} />
                         )}

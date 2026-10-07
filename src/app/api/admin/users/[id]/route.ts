@@ -1,126 +1,73 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireUser } from '@/lib/access';
 import { prisma } from '@/lib/prisma';
-import { UserType } from '@prisma/client';
-
-type RouteContext = {
-    params: Promise<{ id: string }>;
-};
-
+import { WorkflowError } from '@/lib/validation';
 export async function DELETE(
     _req: Request,
-    context: RouteContext
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
+        const admin = await requireUser(['ADMIN']);
         const { id } = await context.params;
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { success: false, message: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
-        if (session.user.role !== UserType.ADMIN) {
-            return NextResponse.json(
-                { success: false, message: 'Forbidden' },
-                { status: 403 }
-            );
-        }
-
-        const userId = id;
-
-        if (!userId) {
-            return NextResponse.json(
-                { success: false, message: 'User id is required.' },
-                { status: 400 }
-            );
-        }
-
-        if (session.user.id === userId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'You cannot delete your own account.',
-                },
-                { status: 400 }
-            );
-        }
-
-        const existingUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true },
-        });
-
-        if (!existingUser) {
-            return NextResponse.json(
-                { success: false, message: 'User not found.' },
-                { status: 404 }
-            );
-        }
-
+        if (id === admin.id)
+            throw new WorkflowError('You cannot deactivate your own account.');
         await prisma.$transaction(async (tx) => {
-            await tx.incident.deleteMany({
-                where: { userId },
-            });
-
-            await tx.questionResponse.deleteMany({
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('admin-role-changes'))`;
+            const user = await tx.user.findUnique({ where: { id } });
+            if (!user) throw new WorkflowError('User not found.', 404);
+            if (
+                user.role === 'ADMIN' &&
+                (await tx.user.count({
+                    where: { role: 'ADMIN', active: true },
+                })) <= 1
+            )
+                throw new WorkflowError(
+                    'Cannot deactivate the last admin.',
+                    409
+                );
+            const ledTeams = await tx.miSaludTeam.count({
                 where: {
-                    submission: { userId },
+                    leaderUserId: id,
+                    status: 'APPROVED',
+                    memberships: {
+                        some: { userId: { not: id }, status: 'APPROVED' },
+                    },
                 },
             });
-
-            await tx.submission.deleteMany({
-                where: { userId },
+            if (ledTeams)
+                throw new WorkflowError(
+                    'Transfer team leadership before deactivating this account.',
+                    409
+                );
+            await tx.user.update({ where: { id }, data: { active: false } });
+            await tx.session.deleteMany({ where: { userId: id } });
+            await tx.miSaludMembership.updateMany({
+                where: { userId: id },
+                data: { status: 'REJECTED' },
             });
-
             await tx.roleChangeRequest.updateMany({
-                where: { reviewedById: userId },
-                data: { reviewedById: null },
-            });
-
-            await tx.roleChangeRequest.deleteMany({
-                where: { userId },
-            });
-
-            await tx.account.deleteMany({
-                where: { userId },
-            });
-
-            await tx.session.deleteMany({
-                where: { userId },
-            });
-
-            await tx.authenticator.deleteMany({
-                where: { userId },
-            });
-
-            await tx.unahonReassessmentRequest.deleteMany({
-                where: {
-                    OR: [{ userId }, { requestedById: userId }],
+                where: { userId: id, status: 'PENDING' },
+                data: {
+                    status: 'CANCELLED',
+                    reviewedAt: new Date(),
+                    reviewedById: admin.id,
                 },
-            });
-
-            await tx.unahon.deleteMany({
-                where: { userId },
-            });
-
-            await tx.user.delete({
-                where: { id: userId },
             });
         });
-
         return NextResponse.json({
             success: true,
-            message: 'User deleted successfully.',
+            message: 'Account deactivated. Records and history were preserved.',
         });
-    } catch (error) {
-        console.error('DELETE /api/admin/users/[id] error:', error);
-
+    } catch (e) {
         return NextResponse.json(
-            { success: false, message: 'Failed to delete user.' },
-            { status: 500 }
+            {
+                success: false,
+                message:
+                    e instanceof WorkflowError
+                        ? e.message
+                        : 'Failed to deactivate account.',
+            },
+            { status: e instanceof WorkflowError ? e.status : 500 }
         );
     }
 }

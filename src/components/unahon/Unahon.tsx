@@ -1,5 +1,6 @@
 'use client';
 
+import { CountBars } from '@/components/charts/ReadableCharts';
 import { getUnahonFormsSummary } from '@/lib/action/unahon';
 import type { UnahonDashboardProps, UnahonSummary, UnahonProps } from '@/types';
 import { Skeleton, Card, CardBody, CardHeader, Button } from '@heroui/react';
@@ -33,9 +34,10 @@ const Unahon = ({ session }: UnahonDashboardProps) => {
     const {
         data: unahonDashboardData,
         isLoading,
+        isError: summaryError,
         refetch: refetchUnahonDashboard,
     } = useQuery({
-        queryKey: ['unahon-dashboard'],
+        queryKey: ['unahon-dashboard', session?.user?.id, session?.user?.role],
         queryFn: async () => {
             const [summaryData, pendingRes] = await Promise.all([
                 getUnahonFormsSummary(),
@@ -172,6 +174,27 @@ const Unahon = ({ session }: UnahonDashboardProps) => {
     };
 
     if (isUnahonView || isReassessment) {
+        if (summaryError)
+            return (
+                <div
+                    role="alert"
+                    className="mx-auto my-10 max-w-3xl rounded-2xl border border-amber-200 bg-amber-50 p-6"
+                >
+                    <h1 className="font-bold text-amber-950">
+                        Assessment summary could not be loaded
+                    </h1>
+                    <p className="mt-2 text-sm text-amber-900">
+                        Check your connection and retry. An unavailable source
+                        is not a zero count.
+                    </p>
+                    <button
+                        onClick={() => void refetchUnahonDashboard()}
+                        className="mt-4 rounded-lg bg-[#77152d] px-4 py-2 text-sm text-white"
+                    >
+                        Retry assessment summary
+                    </button>
+                </div>
+            );
         return (
             <UnahonForm
                 {...currentUnahonProps}
@@ -554,144 +577,22 @@ ring-2 ring-white/70`}
                                         </CardHeader>
 
                                         <CardBody className="p-6">
-                                            <div className="h-80">
-                                                <ResponsiveContainer
-                                                    width="100%"
-                                                    height="100%"
-                                                >
-                                                    <BarChart
-                                                        data={[
-                                                            {
-                                                                name: 'Initial',
-                                                                value: displaySummary.initialAssessment,
-                                                            },
-                                                            {
-                                                                name: 'Reassessment',
-                                                                value: displaySummary.reassessment,
-                                                            },
-                                                        ]}
-                                                        layout="vertical"
-                                                        margin={{
-                                                            top: 10,
-                                                            right: 40,
-                                                            left: 10,
-                                                            bottom: 10,
-                                                        }}
-                                                    >
-                                                        <defs>
-                                                            {/* 3D-ish gradients */}
-                                                            <linearGradient
-                                                                id="gradInitial"
-                                                                x1="0"
-                                                                y1="0"
-                                                                x2="1"
-                                                                y2="0"
-                                                            >
-                                                                <stop
-                                                                    offset="0%"
-                                                                    stopColor="rgba(245, 158, 11, 0.25)"
-                                                                />
-                                                                <stop
-                                                                    offset="55%"
-                                                                    stopColor="rgba(245, 158, 11, 0.65)"
-                                                                />
-                                                                <stop
-                                                                    offset="100%"
-                                                                    stopColor="rgba(245, 158, 11, 0.95)"
-                                                                />
-                                                            </linearGradient>
-
-                                                            <linearGradient
-                                                                id="gradReassess"
-                                                                x1="0"
-                                                                y1="0"
-                                                                x2="1"
-                                                                y2="0"
-                                                            >
-                                                                <stop
-                                                                    offset="0%"
-                                                                    stopColor="rgba(59, 130, 246, 0.25)"
-                                                                />
-                                                                <stop
-                                                                    offset="55%"
-                                                                    stopColor="rgba(59, 130, 246, 0.65)"
-                                                                />
-                                                                <stop
-                                                                    offset="100%"
-                                                                    stopColor="rgba(59, 130, 246, 0.95)"
-                                                                />
-                                                            </linearGradient>
-                                                        </defs>
-
-                                                        <CartesianGrid
-                                                            strokeDasharray="3 3"
-                                                            vertical={false}
-                                                            opacity={0.25}
-                                                        />
-
-                                                        <XAxis
-                                                            type="number"
-                                                            tick={{
-                                                                fill: '#334155',
-                                                            }}
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                        />
-                                                        <YAxis
-                                                            type="category"
-                                                            dataKey="name"
-                                                            width={140}
-                                                            tick={{
-                                                                fill: '#334155',
-                                                            }}
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                        />
-
-                                                        <Tooltip
-                                                            formatter={(
-                                                                value
-                                                            ) => [
-                                                                `${value}`,
-                                                                'Count',
-                                                            ]}
-                                                            contentStyle={{
-                                                                backgroundColor:
-                                                                    'rgba(255, 255, 255, 0.95)',
-                                                                border: '1px solid rgba(185, 28, 28, 0.20)',
-                                                                borderRadius:
-                                                                    '10px',
-                                                                boxShadow:
-                                                                    '0 10px 18px -10px rgba(0, 0, 0, 0.20)',
-                                                            }}
-                                                        />
-
-                                                        <Bar
-                                                            dataKey="value"
-                                                            radius={[
-                                                                10, 10, 10, 10,
-                                                            ]}
-                                                            barSize={18}
-                                                            style={{
-                                                                filter: 'drop-shadow(0 10px 10px rgba(0,0,0,0.18))',
-                                                            }}
-                                                        >
-                                                            {/* Choose gradient per row */}
-                                                            <Cell fill="url(#gradInitial)" />
-                                                            <Cell fill="url(#gradReassess)" />
-
-                                                            {/* show number at end */}
-                                                            <LabelList
-                                                                dataKey="value"
-                                                                position="right"
-                                                                style={{
-                                                                    fill: '#111827',
-                                                                    fontWeight: 600,
-                                                                }}
-                                                            />
-                                                        </Bar>
-                                                    </BarChart>
-                                                </ResponsiveContainer>
+                                            <div className="min-w-0">
+                                                <CountBars
+                                                    data={[
+                                                        {
+                                                            name: 'Initial assessment',
+                                                            value: displaySummary.initialAssessment,
+                                                            color: '#8B1538',
+                                                        },
+                                                        {
+                                                            name: 'Reassessment',
+                                                            value: displaySummary.reassessment,
+                                                            color: '#2563EB',
+                                                        },
+                                                    ]}
+                                                    unit="assessments"
+                                                />
                                             </div>
                                         </CardBody>
                                     </Card>
@@ -705,193 +606,32 @@ ring-2 ring-white/70`}
                                         </CardHeader>
 
                                         <CardBody className="p-6">
-                                            <div className="h-80">
-                                                <ResponsiveContainer
-                                                    width="100%"
-                                                    height="100%"
-                                                >
-                                                    <BarChart
-                                                        data={[
-                                                            {
-                                                                name: 'Red',
-                                                                value: displaySummary.redCount,
-                                                            },
-                                                            {
-                                                                name: 'Yellow',
-                                                                value: displaySummary.yellowCount,
-                                                            },
-                                                            {
-                                                                name: 'Green',
-                                                                value: displaySummary.greenCount,
-                                                            },
-                                                            {
-                                                                name: 'None',
-                                                                value: displaySummary.noneCount,
-                                                            },
-                                                        ]}
-                                                        layout="vertical"
-                                                        margin={{
-                                                            top: 10,
-                                                            right: 40,
-                                                            left: 10,
-                                                            bottom: 10,
-                                                        }}
-                                                    >
-                                                        <defs>
-                                                            <linearGradient
-                                                                id="gradRed"
-                                                                x1="0"
-                                                                y1="0"
-                                                                x2="1"
-                                                                y2="0"
-                                                            >
-                                                                <stop
-                                                                    offset="0%"
-                                                                    stopColor="rgba(239, 68, 68, 0.25)"
-                                                                />
-                                                                <stop
-                                                                    offset="55%"
-                                                                    stopColor="rgba(239, 68, 68, 0.65)"
-                                                                />
-                                                                <stop
-                                                                    offset="100%"
-                                                                    stopColor="rgba(239, 68, 68, 0.95)"
-                                                                />
-                                                            </linearGradient>
-
-                                                            <linearGradient
-                                                                id="gradYellow"
-                                                                x1="0"
-                                                                y1="0"
-                                                                x2="1"
-                                                                y2="0"
-                                                            >
-                                                                <stop
-                                                                    offset="0%"
-                                                                    stopColor="rgba(245, 158, 11, 0.25)"
-                                                                />
-                                                                <stop
-                                                                    offset="55%"
-                                                                    stopColor="rgba(245, 158, 11, 0.65)"
-                                                                />
-                                                                <stop
-                                                                    offset="100%"
-                                                                    stopColor="rgba(245, 158, 11, 0.95)"
-                                                                />
-                                                            </linearGradient>
-
-                                                            <linearGradient
-                                                                id="gradGreen"
-                                                                x1="0"
-                                                                y1="0"
-                                                                x2="1"
-                                                                y2="0"
-                                                            >
-                                                                <stop
-                                                                    offset="0%"
-                                                                    stopColor="rgba(34, 197, 94, 0.25)"
-                                                                />
-                                                                <stop
-                                                                    offset="55%"
-                                                                    stopColor="rgba(34, 197, 94, 0.65)"
-                                                                />
-                                                                <stop
-                                                                    offset="100%"
-                                                                    stopColor="rgba(34, 197, 94, 0.95)"
-                                                                />
-                                                            </linearGradient>
-
-                                                            <linearGradient
-                                                                id="gradNone"
-                                                                x1="0"
-                                                                y1="0"
-                                                                x2="1"
-                                                                y2="0"
-                                                            >
-                                                                <stop
-                                                                    offset="0%"
-                                                                    stopColor="rgba(100, 116, 139, 0.20)"
-                                                                />
-                                                                <stop
-                                                                    offset="55%"
-                                                                    stopColor="rgba(100, 116, 139, 0.55)"
-                                                                />
-                                                                <stop
-                                                                    offset="100%"
-                                                                    stopColor="rgba(100, 116, 139, 0.85)"
-                                                                />
-                                                            </linearGradient>
-                                                        </defs>
-
-                                                        <CartesianGrid
-                                                            strokeDasharray="3 3"
-                                                            vertical={false}
-                                                            opacity={0.25}
-                                                        />
-
-                                                        <XAxis
-                                                            type="number"
-                                                            tick={{
-                                                                fill: '#334155',
-                                                            }}
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                        />
-                                                        <YAxis
-                                                            type="category"
-                                                            dataKey="name"
-                                                            tick={{
-                                                                fill: '#334155',
-                                                            }}
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            width={90}
-                                                        />
-
-                                                        <Tooltip
-                                                            formatter={(
-                                                                value
-                                                            ) => [
-                                                                `${value}`,
-                                                                'Count',
-                                                            ]}
-                                                            contentStyle={{
-                                                                backgroundColor:
-                                                                    'rgba(255, 255, 255, 0.95)',
-                                                                border: '1px solid rgba(185, 28, 28, 0.20)',
-                                                                borderRadius:
-                                                                    '10px',
-                                                                boxShadow:
-                                                                    '0 10px 18px -10px rgba(0, 0, 0, 0.20)',
-                                                            }}
-                                                        />
-
-                                                        <Bar
-                                                            dataKey="value"
-                                                            radius={[
-                                                                10, 10, 10, 10,
-                                                            ]}
-                                                            barSize={18}
-                                                            style={{
-                                                                filter: 'drop-shadow(0 10px 10px rgba(0,0,0,0.18))',
-                                                            }}
-                                                        >
-                                                            <Cell fill="url(#gradRed)" />
-                                                            <Cell fill="url(#gradYellow)" />
-                                                            <Cell fill="url(#gradGreen)" />
-                                                            <Cell fill="url(#gradNone)" />
-
-                                                            <LabelList
-                                                                dataKey="value"
-                                                                position="right"
-                                                                style={{
-                                                                    fill: '#111827',
-                                                                    fontWeight: 600,
-                                                                }}
-                                                            />
-                                                        </Bar>
-                                                    </BarChart>
-                                                </ResponsiveContainer>
+                                            <div className="min-w-0">
+                                                <CountBars
+                                                    data={[
+                                                        {
+                                                            name: 'Red',
+                                                            value: displaySummary.redCount,
+                                                            color: '#BE123C',
+                                                        },
+                                                        {
+                                                            name: 'Yellow',
+                                                            value: displaySummary.yellowCount,
+                                                            color: '#B7790E',
+                                                        },
+                                                        {
+                                                            name: 'Green',
+                                                            value: displaySummary.greenCount,
+                                                            color: '#087F62',
+                                                        },
+                                                        {
+                                                            name: 'No flagged category',
+                                                            value: displaySummary.noneCount,
+                                                            color: '#64748B',
+                                                        },
+                                                    ]}
+                                                    unit="assessments"
+                                                />
                                             </div>
                                         </CardBody>
                                     </Card>

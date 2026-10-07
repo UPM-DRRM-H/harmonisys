@@ -14,7 +14,10 @@ const config: NextAuthConfig = {
                 password: { label: 'Password', type: 'password' },
             },
             async authorize(credentials) {
-                const email = credentials?.email as string | undefined;
+                const email =
+                    typeof credentials?.email === 'string'
+                        ? credentials.email.trim().toLowerCase()
+                        : undefined;
                 const password = credentials?.password as string | undefined;
 
                 if (!email || !password) {
@@ -22,8 +25,11 @@ const config: NextAuthConfig = {
                     return null;
                 }
 
-                const user = await prisma.user.findUnique({
-                    where: { email },
+                const user = await prisma.user.findFirst({
+                    where: {
+                        email: { equals: email, mode: 'insensitive' },
+                        active: true,
+                    },
                 });
 
                 if (!user) {

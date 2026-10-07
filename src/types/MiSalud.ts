@@ -35,6 +35,8 @@ export interface QuestionnaireResponses {
 }
 
 export type SubmissionData = {
+    scheduleId?: string;
+    mode?: 'general' | 'scheduled';
     formData: QuestionnaireFormData;
     responses: QuestionnaireResponses;
 };

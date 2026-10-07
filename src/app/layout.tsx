@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import ChatWidgetLoader from '@/components/chatbot/ChatWidgetLoader';
+import PwaExperience from '@/components/pwa/PwaExperience';
 import QueryProvider from '@/components/providers/QueryProvider';
 
 const geistSans = localFont({
@@ -17,8 +18,23 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
     title: 'Harmonisys',
+    applicationName: 'Harmonisys',
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+        capable: true,
+        title: 'Harmonisys',
+        statusBarStyle: 'default',
+    },
+    icons: { icon: '/icons/app-192.png', apple: '/icons/apple-touch-icon.png' },
     description:
         'An integrated web-based platform for Disaster Risk Reduction and Management (DRRM) that incorporates multiple DRRM-H tools.',
+};
+
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+    themeColor: '#77152d',
 };
 
 export default function RootLayout({
@@ -34,6 +50,7 @@ export default function RootLayout({
                 <QueryProvider>
                     {children}
                     <ChatWidgetLoader />
+                    <PwaExperience />
                 </QueryProvider>
             </body>
         </html>

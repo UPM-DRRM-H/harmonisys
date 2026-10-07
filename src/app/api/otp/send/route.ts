@@ -1,77 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-import { generateOtp } from '@/lib/otp';
-
+import { generateOtp, cancelFailedOtp } from '@/lib/otp';
+import { normalizeEmail, WorkflowError } from '@/lib/validation';
+import {
+    getMailTransporter,
+    sendCheckedMail,
+    mailFrom,
+} from '@/lib/mail/transport';
 export const dynamic = 'force-dynamic';
-
-const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS) || 8000;
-
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-    tls: {
-        rejectUnauthorized: false,
-    },
-    connectionTimeout: SMTP_TIMEOUT_MS,
-    greetingTimeout: SMTP_TIMEOUT_MS,
-    socketTimeout: SMTP_TIMEOUT_MS,
-});
-
 export async function POST(req: NextRequest) {
+    let email: string | undefined, code: string | undefined;
     try {
-        const { email } = await req.json();
-
-        if (!email || typeof email !== 'string') {
-            return NextResponse.json(
-                { success: false, message: 'Email is required.' },
-                { status: 400 }
-            );
-        }
-
-        const code = generateOtp(email);
-
-        await transporter.sendMail({
-            from: process.env.SMTP_FROM,
+        email = normalizeEmail((await req.json()).email);
+        // Fail before saving a challenge if sender configuration is missing.
+        const transport = getMailTransporter();
+        transport.close();
+        code = await generateOtp(email);
+        await sendCheckedMail({
+            from: mailFrom(),
             to: email,
-            subject: 'Your verification code',
-            html: `
-                <div style="font-family:sans-serif;max-width:480px;margin:auto">
-                    <h2 style="color:#1a1a1a">Verify your email</h2>
-                    <p>Use the code below to complete your registration. It expires in <strong>10 minutes</strong>.</p>
-                    <div style="
-                        font-size:2.5rem;
-                        font-weight:700;
-                        letter-spacing:0.35em;
-                        text-align:center;
-                        padding:24px 0;
-                        color:#b45309;
-                    ">${code}</div>
-                    <p style="color:#6b7280;font-size:0.875rem">
-                        If you didn't request this, you can safely ignore this email.
-                    </p>
-                </div>
-            `,
+            subject: 'Your Harmonisys verification code',
+            text:
+                'Your verification code is ' +
+                code +
+                '. It expires in 10 minutes. If you did not request this, ignore this email.',
         });
-
         return NextResponse.json({ success: true });
-    } catch (err) {
-        console.error(
-            '[send-otp]',
-            err instanceof Error ? err.message : 'Unknown SMTP error'
-        );
-
+    } catch (error) {
+        if (email && code) await cancelFailedOtp(email, code).catch(() => {});
+        const status =
+            error instanceof WorkflowError ? error.status : email ? 503 : 400;
         return NextResponse.json(
             {
                 success: false,
                 message:
-                    'We could not send the verification email right now. Please try again later.',
+                    error instanceof WorkflowError
+                        ? error.message
+                        : status === 400
+                          ? 'Enter a valid email address.'
+                          : 'We could not send the verification email. Please try again later.',
             },
-            { status: 503 }
+            { status }
         );
     }
 }

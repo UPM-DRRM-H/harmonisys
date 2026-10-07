@@ -6,10 +6,7 @@ type RouteContext = {
     params: Promise<{ id: string }>;
 };
 
-export async function GET(
-    _req: Request,
-    context: RouteContext
-) {
+export async function GET(_req: Request, context: RouteContext) {
     const session = await auth();
     const { id } = await context.params;
 
@@ -25,10 +22,7 @@ export async function GET(
     return NextResponse.json({ data: incident });
 }
 
-export async function PATCH(
-    req: Request,
-    context: RouteContext
-) {
+export async function PATCH(req: Request, context: RouteContext) {
     const session = await auth();
     const { id } = await context.params;
 
@@ -50,6 +44,7 @@ export async function PATCH(
             ...(typeof reviewNote === 'string' ? { reviewNote } : {}),
             reviewedAt: new Date(),
             reviewedBy: session.user.email || session.user.id,
+            reviewedByUserId: session.user.id,
         },
     });
 

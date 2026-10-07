@@ -1,39 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp';
-
 export async function POST(req: NextRequest) {
     try {
         const { email, code } = await req.json();
-        console.log('verify-otp received:', { email, code });
-
-        if (!email || !code) {
+        if (typeof email !== 'string' || typeof code !== 'string')
             return NextResponse.json(
-                { success: false, message: 'Email and code are required.' },
+                {
+                    success: false,
+                    message: 'Email and six-digit code are required.',
+                },
                 { status: 400 }
             );
-        }
-
-        const result = verifyOtp(email, code);
-        console.log('verify result:', result);
-
-        if (!result.ok) {
-            const messages: Record<string, string> = {
-                expired: 'Your OTP has expired. Please request a new one.',
-                invalid: 'Invalid code. Please try again.',
-                max_attempts: 'Too many attempts. Please request a new code.',
-            };
+        const result = await verifyOtp(email, code);
+        if (!result.ok)
             return NextResponse.json(
-                { success: false, message: messages[result.reason] },
+                {
+                    success: false,
+                    message:
+                        result.reason === 'max_attempts'
+                            ? 'Too many attempts. Request a new code.'
+                            : result.reason === 'expired'
+                              ? 'Code expired. Request a new code.'
+                              : 'Invalid code.',
+                },
                 { status: 400 }
             );
-        }
-
-        return NextResponse.json({ success: true });
-    } catch (err) {
-        console.error('[verify-otp]', err);
+        return NextResponse.json({
+            success: true,
+            verificationToken: result.verificationToken,
+        });
+    } catch {
         return NextResponse.json(
-            { success: false, message: 'Verification failed. Try again.' },
-            { status: 500 }
+            {
+                success: false,
+                message: 'Verification failed. Please try again.',
+            },
+            { status: 400 }
         );
     }
 }

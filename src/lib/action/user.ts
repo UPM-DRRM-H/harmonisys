@@ -1,6 +1,8 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireUser } from '@/lib/access';
+import { WorkflowError } from '@/lib/validation';
 import { signIn, signOut } from '@/lib/auth';
 import { AuthError } from 'next-auth';
 import { revalidatePath } from 'next/cache';
@@ -51,31 +53,17 @@ export const handleSignOut = async () => {
     await signOut({ redirectTo: '/' });
 };
 
-export const getUserById = async (id: string) => {
-    try {
-        const user = await prisma.user.findUnique({ where: { id } });
-
-        return user;
-    } catch {
-        return null;
-    }
-};
-
-export const getAccountById = async (userId: string) => {
-    try {
-        const account = await prisma.account.findFirst({ where: { userId } });
-
-        return account;
-    } catch {
-        return null;
-    }
-};
-
 export const getAllUsers = async (page = 1, limit = 10) => {
     try {
+        await requireUser(['ADMIN']);
+        page = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
+        limit = Number.isFinite(limit)
+            ? Math.min(100, Math.max(1, Math.floor(limit)))
+            : 10;
         const skip = (page - 1) * limit;
 
         const users = await prisma.user.findMany({
+            where: { active: true },
             skip,
             take: limit,
             select: {
@@ -129,7 +117,7 @@ export const getAllUsers = async (page = 1, limit = 10) => {
             pendingRoleRequest: u.roleChangeRequests?.[0] ?? null,
         }));
 
-        const totalUsers = await prisma.user.count();
+        const totalUsers = await prisma.user.count({ where: { active: true } });
 
         return {
             count: totalUsers,
@@ -143,9 +131,49 @@ export const getAllUsers = async (page = 1, limit = 10) => {
 
 export async function updateUserRole(userId: string, role: UserType) {
     try {
-        await prisma.user.update({
-            where: { id: userId },
-            data: { role },
+        await requireUser(['ADMIN']);
+        if (!Object.values(UserType).includes(role))
+            throw new WorkflowError('Invalid role.');
+        const admin = await requireUser(['ADMIN']);
+        await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('admin-role-changes'))`;
+            const target = await tx.user.findUniqueOrThrow({
+                where: { id: userId },
+            });
+            if (
+                target.role === 'ADMIN' &&
+                role !== 'ADMIN' &&
+                (admin.id === userId ||
+                    (await tx.user.count({
+                        where: { role: 'ADMIN', active: true },
+                    })) <= 1)
+            )
+                throw new WorkflowError(
+                    'Cannot demote yourself or the last admin.'
+                );
+            if (role === 'STANDARD') {
+                if (await tx.miSaludTeam.count({ where: { leaderUserId:userId,status:'APPROVED',memberships:{some:{userId:{not:userId},status:'APPROVED'}} } })) throw new WorkflowError('Transfer team leadership before removing Responder access.');
+                await tx.miSaludMembership.updateMany({where:{userId},data:{status:'REJECTED'}});
+            }
+            await tx.user.update({ where: { id: userId }, data: { role } });
+            await tx.roleChangeRequest.updateMany({
+                where: { userId, status: 'PENDING' },
+                data: {
+                    status: 'CANCELLED',
+                    reviewedAt: new Date(),
+                    reviewedById: admin.id,
+                },
+            });
+            await tx.notification.create({
+                data: {
+                    userId,
+                    type: 'GENERAL',
+                    title: 'Account role updated',
+                    message:
+                        'An admin changed your account role to ' + role + '.',
+                    link: '/dashboard',
+                },
+            });
         });
         return { success: true };
     } catch (error) {
@@ -159,6 +187,7 @@ export async function updateUserMhpssLevel(
     mhpssLevel: MhpssLevel | null
 ) {
     try {
+        await requireUser(['ADMIN']);
         await prisma.user.update({
             where: { id: userId },
             data: { mhpssLevel },
@@ -175,6 +204,7 @@ export async function updateUserResponderOrganization(
     responderOrganization: string | null
 ) {
     try {
+        await requireUser(['ADMIN']);
         await prisma.user.update({
             where: { id: userId },
             data: { responderOrganization },
@@ -193,6 +223,7 @@ export async function updateUserResponderOrganization(
 
 export async function updateUserRegion(userId: string, region: string | null) {
     try {
+        await requireUser(['ADMIN']);
         await prisma.user.update({
             where: { id: userId },
             data: { region },

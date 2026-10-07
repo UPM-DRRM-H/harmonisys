@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import RoleRequestModal from './users/Rolerequestmodal';
+import { useQueryIdentity } from '@/components/providers/QueryProvider';
 import NotificationBell from './misalud/notification/NotificationBell';
 
 interface HeaderProps {
@@ -52,11 +53,51 @@ interface HeaderProps {
 }
 
 const toolIconMap: Record<string, React.ReactNode> = {
-    'Incident Reporting System': <Image src="/iris_logo.png" alt="IRS" width={24} height={24} className="w-6 h-6 object-contain" />,
-    REDAS: <Image src="/redas/REDAS_logo_name.png" alt="REDAS" width={24} height={24} className="w-6 h-6 object-contain" />,
-    Unahon: <Image src="/unahon_logo.png" alt="Unahon" width={32} height={32} className="w-6 h-6 object-contain rounded-full scale-[1.6]" />,
-    'Mi Salud': <Image src="/misalud_logo.png" alt="Mi Salud" width={24} height={24} className="w-6 h-6 object-contain" />,
-    HazardHunter: <Image src="/hazardHunter_logo.png" alt="HazardHunter" width={24} height={24} className="w-6 h-6 object-contain" />,
+    'Incident Reporting System': (
+        <Image
+            src="/iris_logo.png"
+            alt="IRS"
+            width={24}
+            height={24}
+            className="w-6 h-6 object-contain"
+        />
+    ),
+    REDAS: (
+        <Image
+            src="/redas/REDAS_logo_name.png"
+            alt="REDAS"
+            width={24}
+            height={24}
+            className="w-6 h-6 object-contain"
+        />
+    ),
+    Unahon: (
+        <Image
+            src="/unahon_logo.png"
+            alt="Unahon"
+            width={32}
+            height={32}
+            className="w-6 h-6 object-contain rounded-full scale-[1.6]"
+        />
+    ),
+    'Mi Salud': (
+        <Image
+            src="/misalud_logo.png"
+            alt="Mi Salud"
+            width={24}
+            height={24}
+            className="w-6 h-6 object-contain"
+        />
+    ),
+    HazardHunter: (
+        <Image
+            src="/hazardHunter_logo.png"
+            alt="HazardHunter"
+            width={24}
+            height={24}
+            className="w-6 h-6 object-contain"
+        />
+    ),
 };
 
 const headerThemes: Record<string, string> = {
@@ -115,6 +156,14 @@ function makeToolDropdownTheme(baseHex: string) {
 }
 
 const Header: React.FC<HeaderProps> = ({ session }) => {
+    const { setScope } = useQueryIdentity();
+    useEffect(() => {
+        setScope(
+            session?.user?.id
+                ? session.user.id + ':' + session.user.role
+                : 'guest'
+        );
+    }, [session?.user?.id, session?.user?.role, setScope]);
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isToolsExpanded, setToolsExpanded] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -167,7 +216,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
     } as React.CSSProperties;
 
     useEffect(() => {
-        if (session?.user?.role !== UserType.STANDARD) return;
+        if (!session?.user || session.user.role === UserType.ADMIN) return;
 
         fetch('/api/user/role-request')
             .then((r) => r.json())
@@ -181,7 +230,8 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
             });
     }, [session?.user?.role]);
 
-    const isStandard = mounted && session?.user?.role === UserType.STANDARD;
+    const isStandard =
+        mounted && !!session?.user && session.user.role !== UserType.ADMIN;
     const hasPendingRequest = mounted && pendingRequest?.status === 'PENDING';
 
     const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
@@ -347,7 +397,9 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
             data-[hover=true]:bg-[color:var(--tool-hover-bg)]
             data-[hover=true]:text-[color:var(--tool-accent)]
           "
-                                                                        startContent={icon}
+                                                                        startContent={
+                                                                            icon
+                                                                        }
                                                                     >
                                                                         <div className="flex flex-col">
                                                                             <span className="font-medium">
@@ -398,7 +450,9 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                             </nav>
 
                             <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
-                                {mounted && session?.user && <NotificationBell />}
+                                {mounted && session?.user && (
+                                    <NotificationBell />
+                                )}
                                 {mounted && session?.user ? (
                                     <Dropdown placement="bottom">
                                         <DropdownTrigger>
@@ -575,8 +629,8 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                                         ) : (
                                                             <>
                                                                 <UserCheck className="w-4 h-4" />
-                                                                Request
-                                                                Responder Role
+                                                                Request Role
+                                                                Upgrade
                                                             </>
                                                         )}
                                                     </button>
@@ -619,8 +673,17 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                                             solidThemeColor;
                                                     }}
                                                     onClick={() => {
-                                                        localStorage.removeItem('locationPromptShown');
-                                                        localStorage.removeItem('userLocation');
+                                                        localStorage.removeItem(
+                                                            'locationPromptShown'
+                                                        );
+                                                        localStorage.removeItem(
+                                                            'userLocation'
+                                                        );
+                                                        window.dispatchEvent(
+                                                            new Event(
+                                                                'harmonisys:session-change'
+                                                            )
+                                                        );
                                                         handleSignOut();
                                                     }}
                                                 >
@@ -748,7 +811,7 @@ const Header: React.FC<HeaderProps> = ({ session }) => {
                                                                     }}
                                                                 >
                                                                     {icon}
-                                                                      <div className="flex flex-col min-w-0">
+                                                                    <div className="flex flex-col min-w-0">
                                                                         <span className="font-medium text-sm text-gray-900 truncate">
                                                                             {
                                                                                 tool.title

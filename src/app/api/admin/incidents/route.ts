@@ -20,6 +20,7 @@ export async function GET(req: Request) {
 
     const incidents = await prisma.incident.findMany({
         where: {
+            ...(session.user.role === 'ADMIN' ? {} : { userId: session.user.id }),
             AND: [
                 q
                     ? {

@@ -1,58 +1,32 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireUser } from '@/lib/access';
 import { prisma } from '@/lib/prisma';
-import { UnahonReassessmentStatus } from '@prisma/client';
-
+import { WorkflowError } from '@/lib/validation';
 export async function PATCH() {
     try {
-        const session = await auth();
-
-        if (!session) {
-            return NextResponse.json(
-                { error: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-
-        const pendingRequest = await prisma.unahonReassessmentRequest.findFirst(
-            {
-                where: {
-                    userId: session.user.id,
-                    status: UnahonReassessmentStatus.PENDING,
-                },
-                orderBy: {
-                    createdAt: 'desc',
-                },
-            }
-        );
-
-        if (!pendingRequest) {
-            return NextResponse.json(
-                { error: 'No pending reassessment request found' },
-                { status: 404 }
-            );
-        }
-
-        const updatedRequest = await prisma.unahonReassessmentRequest.update({
-            where: {
-                id: pendingRequest.id,
-            },
-            data: {
-                status: UnahonReassessmentStatus.COMPLETED,
-                completedAt: new Date(),
-            },
+        const user = await requireUser(['ADMIN', 'RESPONDER']);
+        const pending = await prisma.unahonReassessmentRequest.findFirst({
+            where: { userId: user.id, status: 'PENDING' },
         });
-
-        return NextResponse.json({
-            success: true,
-            request: updatedRequest,
+        if (pending)
+            return NextResponse.json(
+                {
+                    error: 'Save the matching reassessment first. Completion is recorded with the assessment.',
+                },
+                { status: 409 }
+            );
+        const completed = await prisma.unahonReassessmentRequest.findFirst({
+            where: { userId: user.id, status: 'COMPLETED' },
+            orderBy: { completedAt: 'desc' },
         });
-    } catch (error) {
-        console.error('Complete reassessment error:', error);
-
         return NextResponse.json(
-            { error: 'Failed to complete reassessment request' },
-            { status: 500 }
+            { success: !!completed, request: completed },
+            { status: completed ? 200 : 404 }
+        );
+    } catch (e) {
+        return NextResponse.json(
+            { error: 'Access denied' },
+            { status: e instanceof WorkflowError ? e.status : 500 }
         );
     }
 }

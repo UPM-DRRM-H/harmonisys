@@ -5,15 +5,35 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import type { Session } from 'next-auth';
 import {
-    Avatar, Button, Card, CardBody, CardHeader,
-    Chip, Modal, ModalBody, ModalContent, ModalFooter,
-    ModalHeader, Skeleton, useDisclosure,
+    Avatar,
+    Button,
+    Card,
+    CardBody,
+    CardHeader,
+    Chip,
+    Modal,
+    ModalBody,
+    ModalContent,
+    ModalFooter,
+    ModalHeader,
+    Skeleton,
+    useDisclosure,
 } from '@heroui/react';
 import {
-    CalendarClock, CheckCircle2, Clock, ClipboardList,
-    Heart, LogOut, ShieldCheck, Users,
+    CalendarClock,
+    CheckCircle2,
+    Clock,
+    ClipboardList,
+    Heart,
+    LogOut,
+    ShieldCheck,
+    Users,
 } from 'lucide-react';
-import type { Recommendation, QuestionnaireFormData, QuestionnaireResponses } from '@/types';
+import type {
+    Recommendation,
+    QuestionnaireFormData,
+    QuestionnaireResponses,
+} from '@/types';
 import { generateRecommendations } from '@/lib/action/misalud';
 import Questionnaire from './Questionnaire';
 import RecommendationsModal from './RecommendationsModal';
@@ -36,7 +56,12 @@ type Leader = {
 };
 
 type DashboardData = {
-    membership: { id: string; teamId: string; teamName: string; approvedAt: string | null };
+    membership: {
+        id: string;
+        teamId: string;
+        teamName: string;
+        approvedAt: string | null;
+    };
     leader: Leader | null;
     teammates: Teammate[];
 };
@@ -55,11 +80,12 @@ type MemberScreening = {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const SCREENING_TYPE_LABELS: Record<MemberScreening['screeningType'], string> = {
-    PRE_DEPLOYMENT: 'Pre-Deployment',
-    DURING_DEPLOYMENT: 'During Deployment',
-    POST_DEPLOYMENT: 'Post-Deployment',
-};
+const SCREENING_TYPE_LABELS: Record<MemberScreening['screeningType'], string> =
+    {
+        PRE_DEPLOYMENT: 'Pre-Deployment',
+        DURING_DEPLOYMENT: 'During Deployment',
+        POST_DEPLOYMENT: 'Post-Deployment',
+    };
 
 const SCREENING_TYPE_COLORS: Record<
     MemberScreening['screeningType'],
@@ -81,21 +107,33 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
     const router = useRouter();
 
     // leave-team confirmation modal
-    const { isOpen: isLeaveOpen, onOpen: onLeaveOpen, onOpenChange: onLeaveOpenChange } = useDisclosure();
+    const {
+        isOpen: isLeaveOpen,
+        onOpen: onLeaveOpen,
+        onOpenChange: onLeaveOpenChange,
+    } = useDisclosure();
     const [leaving, setLeaving] = useState(false);
 
     // health assessment modal
+    const [selectedScheduleId, setSelectedScheduleId] = useState<
+        string | undefined
+    >();
     const [showQuestionnaire, setShowQuestionnaire] = useState(false);
     const [showRecommendations, setShowRecommendations] = useState(false);
-    const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-    const [assessmentFormData, setAssessmentFormData] = useState<QuestionnaireFormData>({
-        name: '',
-        date: new Date(),
-        team: '',
-    });
+    const [recommendations, setRecommendations] = useState<Recommendation[]>(
+        []
+    );
+    const [assessmentFormData, setAssessmentFormData] =
+        useState<QuestionnaireFormData>({
+            name: '',
+            date: new Date(),
+            team: '',
+        });
 
     // screenings inbox tab
-    const [inboxTab, setInboxTab] = useState<'active' | 'pending' | 'past'>('active');
+    const [inboxTab, setInboxTab] = useState<'active' | 'pending' | 'past'>(
+        'active'
+    );
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -128,23 +166,35 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
     // ── Derived ──────────────────────────────────────────────────────────────
 
     const allSchedules = screeningsData?.schedules ?? [];
-    const activeScreenings = allSchedules.filter((s) => s.windowStatus === 'active' && s.status === 'ACTIVE');
-    const pendingScreenings = allSchedules.filter((s) => s.windowStatus === 'pending' && s.status === 'ACTIVE');
-    const pastScreenings = allSchedules.filter((s) => s.windowStatus === 'past' || s.status !== 'ACTIVE');
+    const activeScreenings = allSchedules.filter(
+        (s) => s.windowStatus === 'active' && s.status === 'ACTIVE'
+    );
+    const pendingScreenings = allSchedules.filter(
+        (s) => s.windowStatus === 'pending' && s.status === 'ACTIVE'
+    );
+    const pastScreenings = allSchedules.filter(
+        (s) => s.windowStatus === 'past' || s.status !== 'ACTIVE'
+    );
 
     const tabScreenings =
-        inboxTab === 'active' ? activeScreenings :
-        inboxTab === 'pending' ? pendingScreenings :
-        pastScreenings;
+        inboxTab === 'active'
+            ? activeScreenings
+            : inboxTab === 'pending'
+              ? pendingScreenings
+              : pastScreenings;
 
     // ── Handlers ─────────────────────────────────────────────────────────────
 
     const handleLeaveTeam = async () => {
         setLeaving(true);
         try {
-            const res = await fetch('/api/misalud/member/leave', { method: 'DELETE' });
+            const res = await fetch('/api/misalud/member/leave', {
+                method: 'DELETE',
+            });
             if (!res.ok) throw new Error('Failed to leave team');
-            await queryClient.invalidateQueries({ queryKey: ['misalud-member-dashboard'] });
+            await queryClient.invalidateQueries({
+                queryKey: ['misalud-member-dashboard'],
+            });
             router.replace('/overview/misalud');
         } catch (e) {
             alert(e instanceof Error ? e.message : 'Something went wrong');
@@ -166,7 +216,6 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
     return (
         <div className="min-h-screen bg-emerald-50">
             <div className="container mx-auto px-4 py-8 max-w-7xl">
-
                 {/* Header */}
                 <Card className="mb-8 overflow-hidden rounded-[28px] border border-white/20 shadow-lg">
                     <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 p-6">
@@ -176,11 +225,17 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                     My Mi Salud Dashboard
                                 </h1>
                                 <p className="text-white/80">
-                                    {isLoading ? '...' : data?.membership.teamName ?? 'Your Team'}
+                                    {isLoading
+                                        ? '...'
+                                        : (data?.membership.teamName ??
+                                          'Your Team')}
                                 </p>
                             </div>
                             <Button
-                                onPress={() => setShowQuestionnaire(true)}
+                                onPress={() => {
+                                    setSelectedScheduleId(undefined);
+                                    setShowQuestionnaire(true);
+                                }}
                                 className="shrink-0 bg-white/20 hover:bg-white/30 text-white font-semibold rounded-xl border border-white/30"
                                 startContent={<Heart className="w-4 h-4" />}
                             >
@@ -193,7 +248,10 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                 {isLoading ? (
                     <div className="space-y-6">
                         {[1, 2, 3].map((i) => (
-                            <Card key={i} className="rounded-2xl bg-white/70 shadow-md">
+                            <Card
+                                key={i}
+                                className="rounded-2xl bg-white/70 shadow-md"
+                            >
                                 <CardBody className="p-6 space-y-3">
                                     <Skeleton className="h-6 w-48 rounded-lg" />
                                     <Skeleton className="h-14 w-full rounded-xl" />
@@ -204,26 +262,33 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                 ) : error ? (
                     <Card className="rounded-2xl bg-white/70 shadow-md border border-red-100">
                         <CardBody className="p-12 text-center">
-                            <p className="font-semibold text-red-600 mb-1">Failed to load dashboard</p>
-                            <p className="text-sm text-slate-500">{(error as Error).message}</p>
+                            <p className="font-semibold text-red-600 mb-1">
+                                Failed to load dashboard
+                            </p>
+                            <p className="text-sm text-slate-500">
+                                {(error as Error).message}
+                            </p>
                         </CardBody>
                     </Card>
                 ) : !data ? null : (
                     <div className="space-y-6">
-
                         {/* ── Team Info ──────────────────────────────────────── */}
                         <Card className="rounded-2xl bg-white/80 shadow-lg border border-white/20">
                             <CardHeader className="px-6 pt-5 pb-2">
                                 <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center gap-2">
                                         <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                                        <h2 className="text-lg font-black text-slate-800">My Team</h2>
+                                        <h2 className="text-lg font-black text-slate-800">
+                                            My Team
+                                        </h2>
                                     </div>
                                     <Button
                                         size="sm"
                                         color="danger"
                                         variant="flat"
-                                        startContent={<LogOut className="w-3.5 h-3.5" />}
+                                        startContent={
+                                            <LogOut className="w-3.5 h-3.5" />
+                                        }
                                         onPress={onLeaveOpen}
                                     >
                                         Leave Team
@@ -241,7 +306,9 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                     {data.membership.approvedAt && (
                                         <p className="text-xs text-slate-400 mt-1">
                                             Member since{' '}
-                                            {new Date(data.membership.approvedAt).toLocaleDateString()}
+                                            {new Date(
+                                                data.membership.approvedAt
+                                            ).toLocaleDateString()}
                                         </p>
                                     )}
                                 </div>
@@ -254,8 +321,14 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                         </p>
                                         <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 px-4 py-3">
                                             <Avatar
-                                                src={data.leader.image ?? undefined}
-                                                name={data.leader.name ?? data.leader.email}
+                                                src={
+                                                    data.leader.image ??
+                                                    undefined
+                                                }
+                                                name={
+                                                    data.leader.name ??
+                                                    data.leader.email
+                                                }
                                                 size="sm"
                                                 className="shrink-0 bg-emerald-100 text-emerald-800"
                                             />
@@ -267,7 +340,12 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                                     {data.leader.email}
                                                 </p>
                                             </div>
-                                            <Chip size="sm" color="success" variant="flat" className="ml-auto shrink-0">
+                                            <Chip
+                                                size="sm"
+                                                color="success"
+                                                variant="flat"
+                                                className="ml-auto shrink-0"
+                                            >
                                                 Leader
                                             </Chip>
                                         </div>
@@ -281,9 +359,16 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                             <CardHeader className="px-6 pt-5 pb-2">
                                 <div className="flex items-center gap-2">
                                     <Users className="w-5 h-5 text-emerald-600" />
-                                    <h2 className="text-lg font-black text-slate-800">Team Roster</h2>
-                                    <Chip size="sm" color="success" variant="flat">
-                                        {data.teammates.length} peer{data.teammates.length !== 1 ? 's' : ''}
+                                    <h2 className="text-lg font-black text-slate-800">
+                                        Team Roster
+                                    </h2>
+                                    <Chip
+                                        size="sm"
+                                        color="success"
+                                        variant="flat"
+                                    >
+                                        {data.teammates.length} peer
+                                        {data.teammates.length !== 1 ? 's' : ''}
                                     </Chip>
                                 </div>
                             </CardHeader>
@@ -291,7 +376,9 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                 {data.teammates.length === 0 ? (
                                     <div className="text-center py-8 text-slate-400">
                                         <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                                        <p className="font-medium">No other members yet.</p>
+                                        <p className="font-medium">
+                                            No other members yet.
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -301,8 +388,14 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                                 className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3"
                                             >
                                                 <Avatar
-                                                    src={teammate.image ?? undefined}
-                                                    name={teammate.name ?? teammate.email}
+                                                    src={
+                                                        teammate.image ??
+                                                        undefined
+                                                    }
+                                                    name={
+                                                        teammate.name ??
+                                                        teammate.email
+                                                    }
                                                     size="sm"
                                                     className="shrink-0 bg-emerald-100 text-emerald-800"
                                                 />
@@ -317,7 +410,9 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                                 {teammate.approvedAt && (
                                                     <p className="ml-auto text-xs text-slate-400 hidden sm:block shrink-0">
                                                         Joined{' '}
-                                                        {new Date(teammate.approvedAt).toLocaleDateString()}
+                                                        {new Date(
+                                                            teammate.approvedAt
+                                                        ).toLocaleDateString()}
                                                     </p>
                                                 )}
                                             </div>
@@ -332,7 +427,9 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                             <CardHeader className="px-6 pt-5 pb-2">
                                 <div className="flex items-center gap-2">
                                     <CalendarClock className="w-5 h-5 text-emerald-600" />
-                                    <h2 className="text-lg font-black text-slate-800">Screenings Inbox</h2>
+                                    <h2 className="text-lg font-black text-slate-800">
+                                        Screenings Inbox
+                                    </h2>
                                 </div>
                             </CardHeader>
                             <CardBody className="px-6 pb-5">
@@ -340,9 +437,21 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                 <div className="flex gap-1 mb-4 bg-slate-100 rounded-xl p-1">
                                     {(
                                         [
-                                            { key: 'active', label: 'Active', count: activeScreenings.length },
-                                            { key: 'pending', label: 'Pending', count: pendingScreenings.length },
-                                            { key: 'past', label: 'Past', count: pastScreenings.length },
+                                            {
+                                                key: 'active',
+                                                label: 'Active',
+                                                count: activeScreenings.length,
+                                            },
+                                            {
+                                                key: 'pending',
+                                                label: 'Pending',
+                                                count: pendingScreenings.length,
+                                            },
+                                            {
+                                                key: 'past',
+                                                label: 'Past',
+                                                count: pastScreenings.length,
+                                            },
                                         ] as const
                                     ).map((tab) => (
                                         <button
@@ -373,7 +482,10 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                 {screeningsLoading ? (
                                     <div className="space-y-3">
                                         {[1, 2].map((i) => (
-                                            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                                            <Skeleton
+                                                key={i}
+                                                className="h-16 w-full rounded-xl"
+                                            />
                                         ))}
                                     </div>
                                 ) : tabScreenings.length === 0 ? (
@@ -393,18 +505,34 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <Chip
                                                         size="sm"
-                                                        color={SCREENING_TYPE_COLORS[s.screeningType]}
+                                                        color={
+                                                            SCREENING_TYPE_COLORS[
+                                                                s.screeningType
+                                                            ]
+                                                        }
                                                         variant="flat"
                                                         className="shrink-0"
                                                     >
-                                                        {SCREENING_TYPE_LABELS[s.screeningType]}
+                                                        {
+                                                            SCREENING_TYPE_LABELS[
+                                                                s.screeningType
+                                                            ]
+                                                        }
                                                     </Chip>
                                                     <div className="min-w-0 text-sm text-slate-600">
-                                                        <span className="font-medium">Opens:</span>{' '}
-                                                        {new Date(s.validDate).toLocaleString()}
+                                                        <span className="font-medium">
+                                                            Opens:
+                                                        </span>{' '}
+                                                        {new Date(
+                                                            s.validDate
+                                                        ).toLocaleString()}
                                                         {' · '}
-                                                        <span className="font-medium">Closes:</span>{' '}
-                                                        {new Date(s.dueDate).toLocaleString()}
+                                                        <span className="font-medium">
+                                                            Closes:
+                                                        </span>{' '}
+                                                        {new Date(
+                                                            s.dueDate
+                                                        ).toLocaleString()}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
@@ -413,25 +541,49 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                                             size="sm"
                                                             color="success"
                                                             variant="flat"
-                                                            startContent={<CheckCircle2 className="w-3 h-3" />}
+                                                            startContent={
+                                                                <CheckCircle2 className="w-3 h-3" />
+                                                            }
                                                         >
                                                             Submitted
                                                         </Chip>
-                                                    ) : s.windowStatus === 'active' ? (
+                                                    ) : s.windowStatus ===
+                                                      'active' ? (
                                                         <Button
                                                             size="sm"
                                                             color="success"
-                                                            startContent={<Heart className="w-3.5 h-3.5" />}
-                                                            onPress={() => setShowQuestionnaire(true)}
+                                                            startContent={
+                                                                <Heart className="w-3.5 h-3.5" />
+                                                            }
+                                                            onPress={() => {
+                                                                setSelectedScheduleId(
+                                                                    s.id
+                                                                );
+                                                                setShowQuestionnaire(
+                                                                    true
+                                                                );
+                                                            }}
                                                         >
                                                             Submit Now
                                                         </Button>
-                                                    ) : s.windowStatus === 'pending' ? (
-                                                        <Chip size="sm" color="default" variant="flat" startContent={<Clock className="w-3 h-3" />}>
+                                                    ) : s.windowStatus ===
+                                                      'pending' ? (
+                                                        <Chip
+                                                            size="sm"
+                                                            color="default"
+                                                            variant="flat"
+                                                            startContent={
+                                                                <Clock className="w-3 h-3" />
+                                                            }
+                                                        >
                                                             Not open yet
                                                         </Chip>
                                                     ) : (
-                                                        <Chip size="sm" color="default" variant="flat">
+                                                        <Chip
+                                                            size="sm"
+                                                            color="default"
+                                                            variant="flat"
+                                                        >
                                                             Missed
                                                         </Chip>
                                                     )}
@@ -442,23 +594,29 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                                 )}
                             </CardBody>
                         </Card>
-
                     </div>
                 )}
             </div>
 
             {/* ── Leave Team Modal ─────────────────────────────────────────── */}
-            <Modal isOpen={isLeaveOpen} onOpenChange={onLeaveOpenChange} size="sm">
+            <Modal
+                isOpen={isLeaveOpen}
+                onOpenChange={onLeaveOpenChange}
+                size="sm"
+            >
                 <ModalContent>
                     {(onClose) => (
                         <>
-                            <ModalHeader className="text-slate-800">Leave Team</ModalHeader>
+                            <ModalHeader className="text-slate-800">
+                                Leave Team
+                            </ModalHeader>
                             <ModalBody>
                                 <p className="text-slate-600 text-sm">
                                     Are you sure you want to leave{' '}
-                                    <strong>{data?.membership.teamName}</strong>? You will lose
-                                    access to team screenings and will need to rejoin or apply to
-                                    a new team.
+                                    <strong>{data?.membership.teamName}</strong>
+                                    ? You will lose access to team screenings
+                                    and will need to rejoin or apply to a new
+                                    team.
                                 </p>
                             </ModalBody>
                             <ModalFooter>
@@ -522,6 +680,7 @@ export default function MiSaludMemberDashboard({ session: _session }: Props) {
                         </CardHeader>
                         <CardBody className="p-6">
                             <Questionnaire
+                                scheduleId={selectedScheduleId}
                                 onClose={() => setShowQuestionnaire(false)}
                                 openSuccessModal={() => {
                                     setShowQuestionnaire(false);

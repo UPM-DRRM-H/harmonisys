@@ -1,7 +1,9 @@
+import { withAccess } from '@/lib/apiAccess';
 import { type NextRequest, NextResponse } from 'next/server';
 import { IncidentCategory, SeverityLevel } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { requireUser } from '@/lib/access';
 import {
     validateIncidentAttachments,
     validateIncidentLocation,
@@ -31,7 +33,7 @@ function convertSeverityToEnum(severity: string): SeverityLevel {
     return SeverityLevel.LOW;
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -96,13 +98,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        if (
+            Number.isNaN(new Date(date).getTime()) ||
+            !Object.values(IncidentCategory).includes(
+                category as IncidentCategory
+            )
+        )
+            return NextResponse.json(
+                { error: 'Provide a valid incident date and category.' },
+                { status: 400 }
+            );
         // Handle file attachments
         const attachments: string[] = [];
         const files = formData.getAll('attachments') as File[];
         const nonEmptyFiles = files.filter((file) => file.size > 0);
 
-        const attachmentValidation =
-            validateIncidentAttachments(nonEmptyFiles);
+        const attachmentValidation = validateIncidentAttachments(nonEmptyFiles);
         if (!attachmentValidation.valid) {
             return NextResponse.json(
                 { error: attachmentValidation.error },
@@ -117,25 +128,45 @@ export async function POST(request: NextRequest) {
         }
 
         // Create incident in database
-        const incident = await prisma.incident.create({
-            data: {
-                userId: session.user.id,
-                location,
-                date: new Date(date),
-                summary,
-                description,
-                category: convertCategoryToEnum(category),
-                reporter: reporter || null,
-                contact: contact || null,
-                teamDeployed,
-                attachments,
-                otherCategoryDetail:
-                    (category as IncidentCategory) === IncidentCategory.OTHER
-                        ? otherCategoryDetail
-                        : null,
-            },
-        });
+        const incident = await prisma.$transaction(async (tx) => {
+            const created = await tx.incident.create({
+                data: {
+                    userId: session.user.id,
+                    location,
+                    date: new Date(date),
+                    summary,
+                    description,
+                    category: convertCategoryToEnum(category),
+                    reporter: reporter || null,
+                    contact: contact || null,
+                    teamDeployed,
+                    attachments: [],
+                    otherCategoryDetail:
+                        (category as IncidentCategory) ===
+                        IncidentCategory.OTHER
+                            ? otherCategoryDetail
+                            : null,
+                },
+            });
 
+            const stored = [];
+            for (const file of nonEmptyFiles) {
+                const saved = await tx.incidentAttachment.create({
+                    data: {
+                        incidentId: created.id,
+                        filename: file.name.replace(/[^a-zA-Z0-9.-]/g, '_'),
+                        contentType: file.type || 'application/octet-stream',
+                        bytes: Buffer.from(await file.arrayBuffer()),
+                    },
+                    select: { id: true },
+                });
+                stored.push('/api/irs/attachments/' + saved.id);
+            }
+            return tx.incident.update({
+                where: { id: created.id },
+                data: { attachments: stored },
+            });
+        });
         return NextResponse.json(
             {
                 message: 'Incident reported successfully',
@@ -152,9 +183,11 @@ export async function POST(request: NextRequest) {
     }
 }
 
-export async function GET() {
+async function handleGET() {
     try {
+        const user = await requireUser();
         const incidents = await prisma.incident.findMany({
+            where: user.role === 'ADMIN' ? {} : { userId: user.id },
             orderBy: {
                 createdAt: 'desc',
             },
@@ -169,3 +202,7 @@ export async function GET() {
         );
     }
 }
+
+export const POST = withAccess(handlePOST);
+
+export const GET = withAccess(handleGET);

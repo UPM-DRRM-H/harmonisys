@@ -36,3 +36,9 @@ yarn-error.log*
 next-env.d.ts
 
 .env
+
+# Local operational recovery files (may contain private storage references)
+/.private-operations/
+
+# Read-only user-manual extraction and rendered reference pages
+/tmp/manual/

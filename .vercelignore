@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+.private-operations
+node_modules
+.next
+tmp
+docs
+tests
+presentation-video
+public/uploads
+*.tsbuildinfo
+scripts

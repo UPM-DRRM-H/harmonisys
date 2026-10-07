@@ -1,4 +1,5 @@
 'use client';
+import { CountBars, ActivityTrend } from '@/components/charts/ReadableCharts';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -446,42 +447,16 @@ const EventDetailPage = ({ teamDeployed }: EventPageProps) => {
                                 </div>
                             </CardHeader>
                             <CardBody>
-                                <div className="w-full h-[260px]">
-                                    <ResponsiveContainer
-                                        width="100%"
-                                        height="100%"
-                                    >
-                                        <BarChart
-                                            data={categoryChartData}
-                                            margin={{
-                                                top: 10,
-                                                right: 20,
-                                                left: 10,
-                                                bottom: 50,
-                                            }}
-                                        >
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                stroke="#f0f0f0"
-                                            />
-                                            <XAxis
-                                                dataKey="category"
-                                                angle={-45}
-                                                textAnchor="end"
-                                                height={80}
-                                                fontSize={12}
-                                            />
-                                            <YAxis fontSize={12} />
-                                            <Tooltip
-                                                content={<CustomTooltip />}
-                                            />
-                                            <Bar
-                                                dataKey="count"
-                                                fill="#3b82f6"
-                                                radius={[4, 4, 0, 0]}
-                                            />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                <div className="w-full min-w-0">
+                                    <CountBars
+                                        data={categoryChartData.map((r) => ({
+                                            name: r.fullCategory
+                                                .toLowerCase()
+                                                .replace(/_/g, ' '),
+                                            value: r.count,
+                                        }))}
+                                        unit="incidents"
+                                    />
                                 </div>
                             </CardBody>
                         </Card>
@@ -498,41 +473,18 @@ const EventDetailPage = ({ teamDeployed }: EventPageProps) => {
                             </CardHeader>
                             <CardBody>
                                 <div className="w-full h-[400px]">
-                                    <ResponsiveContainer
-                                        width="100%"
-                                        height="100%"
-                                    >
-                                        <LineChart
-                                            data={timelineChartData}
-                                            margin={{
-                                                top: 20,
-                                                right: 30,
-                                                left: 20,
-                                                bottom: 20,
-                                            }}
-                                        >
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                stroke="#f0f0f0"
-                                            />
-                                            <XAxis
-                                                dataKey="month"
-                                                fontSize={12}
-                                            />
-                                            <YAxis fontSize={12} />
-                                            <Tooltip
-                                                content={<CustomTooltip />}
-                                            />
-                                            <Legend />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="total"
-                                                stroke="#3b82f6"
-                                                strokeWidth={3}
-                                                name="Total"
-                                            />
-                                        </LineChart>
-                                    </ResponsiveContainer>
+                                    <ActivityTrend
+                                        rows={timelineChartData.map((r) => ({
+                                            label: r.month,
+                                            total: r.total,
+                                        }))}
+                                        series={[
+                                            {
+                                                key: 'total',
+                                                label: 'Incidents',
+                                            },
+                                        ]}
+                                    />
                                 </div>
                             </CardBody>
                         </Card>
@@ -548,42 +500,14 @@ const EventDetailPage = ({ teamDeployed }: EventPageProps) => {
                                 </div>
                             </CardHeader>
                             <CardBody>
-                                <div className="w-full h-[260px]">
-                                    <ResponsiveContainer
-                                        width="100%"
-                                        height="100%"
-                                    >
-                                        <BarChart
-                                            data={locationChartData}
-                                            margin={{
-                                                top: 10,
-                                                right: 20,
-                                                left: 10,
-                                                bottom: 70,
-                                            }}
-                                        >
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                stroke="#f0f0f0"
-                                            />
-                                            <XAxis
-                                                dataKey="location"
-                                                angle={-45}
-                                                textAnchor="end"
-                                                height={100}
-                                                fontSize={12}
-                                            />
-                                            <YAxis fontSize={12} />
-                                            <Tooltip
-                                                content={<CustomTooltip />}
-                                            />
-                                            <Bar
-                                                dataKey="count"
-                                                fill="#8b5cf6"
-                                                radius={[4, 4, 0, 0]}
-                                            />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                <div className="w-full min-w-0">
+                                    <CountBars
+                                        data={locationChartData.map((r) => ({
+                                            name: r.fullLocation,
+                                            value: r.count,
+                                        }))}
+                                        unit="incidents shown"
+                                    />
                                 </div>
                             </CardBody>
                         </Card>

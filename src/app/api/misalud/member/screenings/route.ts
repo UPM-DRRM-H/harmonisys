@@ -8,7 +8,10 @@ export async function GET() {
     try {
         const session = await auth();
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
         }
 
         const membership = await prisma.miSaludMembership.findFirst({
@@ -22,7 +25,10 @@ export async function GET() {
         });
 
         if (!membership) {
-            return NextResponse.json({ error: 'No approved Team Member membership found' }, { status: 403 });
+            return NextResponse.json(
+                { error: 'No approved Team Member membership found' },
+                { status: 403 }
+            );
         }
 
         const schedules = await prisma.miSaludScreeningSchedule.findMany({
@@ -38,8 +44,14 @@ export async function GET() {
                 const submission = await prisma.submission.findFirst({
                     where: {
                         userId: session.user.id,
-                        team: membership.team.name,
-                        createdAt: { gte: s.validDate, lte: s.dueDate },
+                        OR: [
+                            { scheduleId: s.id },
+                            {
+                                scheduleId: null,
+                                teamId: membership.teamId,
+                                createdAt: { gte: s.validDate, lte: s.dueDate },
+                            },
+                        ],
                     },
                     orderBy: { createdAt: 'desc' },
                 });
@@ -68,6 +80,9 @@ export async function GET() {
         return NextResponse.json({ schedules: enriched });
     } catch (error) {
         console.error('GET /api/misalud/member/screenings error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
     }
 }

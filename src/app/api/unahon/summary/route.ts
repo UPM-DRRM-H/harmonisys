@@ -1,14 +1,19 @@
+import { withAccess } from '@/lib/apiAccess';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireUser } from '@/lib/access';
 
-export async function GET() {
+async function handleGET() {
     try {
+        const user = await requireUser(['ADMIN', 'RESPONDER']);
+        const scope = user.role === 'ADMIN' ? {} : { userId: user.id };
         // Get total assessments
-        const totalAssessments = await prisma.unahon.count();
+        const totalAssessments = await prisma.unahon.count({ where: scope });
 
         // Get assessments by type
         const assessmentsByType = await prisma.unahon.groupBy({
             by: ['assessmentType'],
+            where: scope,
             _count: {
                 assessmentType: true,
             },
@@ -20,6 +25,7 @@ export async function GET() {
 
         const recentAssessments = await prisma.unahon.count({
             where: {
+                ...scope,
                 date: {
                     gte: thirtyDaysAgo,
                 },
@@ -29,6 +35,7 @@ export async function GET() {
         // Get assessments by responder
         const assessmentsByResponder = await prisma.unahon.groupBy({
             by: ['userId'],
+            where: scope,
             _count: {
                 userId: true,
             },
@@ -78,3 +85,5 @@ export async function GET() {
         );
     }
 }
+
+export const GET = withAccess(handleGET, ['ADMIN', 'RESPONDER']);

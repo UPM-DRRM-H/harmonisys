@@ -1,7 +1,7 @@
+import { fetchRedasData, withTimeout } from '@/lib/redasData';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { IRSdb } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+
 import { auth } from '@/lib/auth';
 import { UserType } from '@prisma/client';
 
@@ -45,37 +45,11 @@ export async function GET() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const userAliases = [
-            currentUser.name?.trim(),
-            currentUser.email?.trim(),
-        ].filter(Boolean) as string[];
-
-        const incidentUserWhere = isAdmin
-            ? {}
-            : {
-                  OR: userAliases.map((alias) => ({
-                      reporter: {
-                          equals: alias,
-                          mode: 'insensitive' as const,
-                      },
-                  })),
-              };
-
-        const recentIncidentUserWhere = isAdmin
-            ? { createdAt: { gte: thirtyDaysAgo } }
-            : {
-                  AND: [
-                      { createdAt: { gte: thirtyDaysAgo } },
-                      {
-                          OR: userAliases.map((alias) => ({
-                              reporter: {
-                                  equals: alias,
-                                  mode: 'insensitive' as const,
-                              },
-                          })),
-                      },
-                  ],
-              };
+        const incidentUserWhere = isAdmin ? {} : { userId: currentUser.id };
+        const recentIncidentUserWhere = {
+            createdAt: { gte: thirtyDaysAgo },
+            ...(isAdmin ? {} : { userId: currentUser.id }),
+        };
 
         const unahonWhere = isAdmin ? {} : { userId: currentUser.id };
         const recentUnahonWhere = isAdmin
@@ -105,7 +79,11 @@ export async function GET() {
             redasStats,
         ] = await Promise.allSettled([
             isAdmin
-                ? prisma.user.groupBy({ by: ['role'], _count: { role: true } })
+                ? prisma.user.groupBy({
+                      by: ['role'],
+                      where: { active: true },
+                      _count: { role: true },
+                  })
                 : Promise.resolve([]),
 
             isAdmin
@@ -129,18 +107,38 @@ export async function GET() {
                       .catch(() => 0),
 
             isAdmin
-                ? getDocs(collection(IRSdb, 'events'))
+                ? prisma.legacyDatasetRecord.count({ where: { source: 'irs', collection: 'events' } })
                 : Promise.resolve(null),
 
             isAdmin
-                ? fetch(
-                      `${process.env.NEXT_PUBLIC_BASE_URL}/api/redas?sheetName=Trainings&label=PROVINCES&count=true`
+                ? fetchRedasData(
+                      new URLSearchParams({
+                          sheetName: 'Trainings',
+                          label: 'PROVINCES',
+                          count: 'true',
+                      })
                   )
-                      .then((res) => res.json())
-                      .catch(() => ({ count: 0 }))
                 : Promise.resolve({ count: 0 }),
         ]);
 
+        if (
+            [userStats, incidentStats, unahonStats, questionnaireStats].some(
+                (source) => source.status === 'rejected'
+            )
+        )
+            throw new Error('A dashboard database source is unavailable.');
+        const sourceAvailability = {
+            irsEvents: isAdmin
+                ? irsEvents.status === 'fulfilled'
+                    ? 'available'
+                    : 'unavailable'
+                : 'not_applicable',
+            redas: isAdmin
+                ? redasStats.status === 'fulfilled'
+                    ? 'available'
+                    : 'unavailable'
+                : 'not_applicable',
+        };
         const totalUsers =
             isAdmin && userStats.status === 'fulfilled'
                 ? userStats.value.reduce(
@@ -185,9 +183,8 @@ export async function GET() {
         const totalIRSEvents =
             isAdmin &&
             irsEvents.status === 'fulfilled' &&
-            irsEvents.value &&
-            !irsEvents.value.empty
-                ? irsEvents.value.size
+            typeof irsEvents.value === 'number'
+                ? irsEvents.value
                 : 0;
 
         const redasTrainingSessions =
@@ -296,16 +293,19 @@ export async function GET() {
             topResponders: topRespondersWithNames,
             recentActivities: recentIncidents.map((incident) => ({
                 tool: 'IRS',
-                action:
-                    incident.category.toLowerCase() === 'other' &&
-                    `New ${incident.otherCategoryDetail?.toLowerCase() || 'incident'} in ${incident.location}`,
+                action: `New ${incident.category === 'OTHER' ? incident.otherCategoryDetail?.toLowerCase() || 'incident' : incident.category.toLowerCase().replace(/_/g, ' ')} in ${incident.location}`,
 
                 timestamp: incident.createdAt.toISOString(),
                 user: incident.reporter || 'Anonymous',
             })),
             system: {
                 lastUpdated: new Date().toISOString(),
-                status: 'operational',
+                status:
+                    sourceAvailability.irsEvents === 'unavailable' ||
+                    sourceAvailability.redas === 'unavailable'
+                        ? 'partial'
+                        : 'operational',
+                sources: sourceAvailability,
             },
         };
 
@@ -315,7 +315,7 @@ export async function GET() {
             message: 'Dashboard statistics retrieved successfully',
         });
 
-        response.headers.set('Cache-Control', 'private, max-age=60');
+        response.headers.set('Cache-Control', 'private, no-store, max-age=0');
         return response;
     } catch (error) {
         console.error('Error fetching dashboard statistics:', error);

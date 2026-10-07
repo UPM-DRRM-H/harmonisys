@@ -7,7 +7,10 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
-        "postinstall": "prisma generate"
+        "postinstall": "prisma generate",
+        "test:backend": "node --test tests/role-notifications.test.cjs && node tests/backend.integration.cjs",
+        "email:worker": "node scripts/email-worker.cjs",
+        "test:ui": "node --test tests/ui-pwa.test.cjs"
     },
     "dependencies": {
         "@auth/prisma-adapter": "^2.7.4",

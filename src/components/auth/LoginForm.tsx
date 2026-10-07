@@ -35,6 +35,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 return;
             }
 
+            window.dispatchEvent(new Event('harmonisys:session-change'));
             onSuccess?.();
             window.location.reload();
         });

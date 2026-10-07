@@ -1,53 +1,37 @@
 import { NextResponse } from 'next/server';
-
-const GOOGLE_APPS_SCRIPT_URL = process.env.GOOGLE_APPS_SCRIPT_URL;
-
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const sheetName = searchParams.get('sheetName');
-    const label = searchParams.get('label');
-    const place = searchParams.get('place');
-    const count = searchParams.get('count');
-
-    if (!sheetName) {
+import { withAccess } from '@/lib/apiAccess';
+import { fetchRedasData } from '@/lib/redasData';
+async function handleGET(request: Request) {
+    const params = new URL(request.url).searchParams;
+    const sheet = params.get('sheetName');
+    if (
+        !sheet ||
+        ![
+            'Participants',
+            'Trainings',
+            'EDM Trainings',
+            'Thesis Collaborations',
+            'Testimonials',
+        ].includes(sheet)
+    )
         return NextResponse.json(
-            { error: 'Missing sheetName parameter' },
+            { error: 'Choose a supported REDAS dataset.' },
             { status: 400 }
         );
-    }
-
-    // Only require label for Trainings, not EDM Trainings
-    if (sheetName === 'Trainings' && !label) {
+    if (sheet === 'Trainings' && !params.get('label'))
         return NextResponse.json(
-            { error: 'Missing label parameter' },
+            { error: 'A training label is required.' },
             { status: 400 }
         );
-    }
-
-    const encodedSheetName = encodeURIComponent(sheetName);
-    let url = `${GOOGLE_APPS_SCRIPT_URL}?sheetName=${encodedSheetName}`;
-
-    if (sheetName === 'Trainings') {
-        const encodedLabel = encodeURIComponent(label!);
-        url += `&label=${encodedLabel}`;
-        if (place) {
-            const encodedPlace = encodeURIComponent(place);
-            url += `&place=${encodedPlace}`;
-        }
-        if (count === 'true') {
-            url += `&count=true`;
-        }
-    }
-
     try {
-        const response = await fetch(url);
-        const data = await response.json();
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error('Error fetching data:', error);
+        return NextResponse.json(await fetchRedasData(params));
+    } catch {
         return NextResponse.json(
-            { error: 'Failed to fetch data' },
-            { status: 500 }
+            {
+                error: 'REDAS training data is unavailable. Please try again later.',
+            },
+            { status: 503 }
         );
     }
 }
+export const GET = withAccess(handleGET);

@@ -342,7 +342,8 @@ const UserTable = () => {
             try {
                 setIsUpdating(true);
                 setEditedRole((prev) => ({ ...prev, [id]: value }));
-                await updateUserRole(id, value);
+                const outcome = await updateUserRole(id, value);
+                if (!outcome.success) throw new Error(outcome.error);
                 void notifyAdminAction({
                     to: userEmail,
                     userName,
@@ -381,7 +382,8 @@ const UserTable = () => {
             try {
                 setIsUpdating(true);
                 setEditedMhpssLevel((prev) => ({ ...prev, [id]: value }));
-                await updateUserMhpssLevel(id, value);
+                const outcome = await updateUserMhpssLevel(id, value);
+                if (!outcome.success) throw new Error(outcome.error);
                 void notifyAdminAction({
                     to: userEmail,
                     userName,
@@ -416,7 +418,11 @@ const UserTable = () => {
             try {
                 setIsUpdating(true);
                 setEditedOrganization((prev) => ({ ...prev, [id]: value }));
-                await updateUserResponderOrganization(id, value.trim() || null);
+                const outcome = await updateUserResponderOrganization(
+                    id,
+                    value.trim() || null
+                );
+                if (!outcome.success) throw new Error(outcome.error);
                 mutate((currentData: any) => {
                     if (!currentData) return currentData;
                     return {
@@ -448,7 +454,8 @@ const UserTable = () => {
             try {
                 setIsUpdating(true);
                 setEditedRegion((prev) => ({ ...prev, [id]: value }));
-                await updateUserRegion(id, value);
+                const outcome = await updateUserRegion(id, value);
+                if (!outcome.success) throw new Error(outcome.error);
                 mutate((currentData: any) => {
                     if (!currentData) return currentData;
                     return {
@@ -996,7 +1003,7 @@ const UserTable = () => {
                                     </Button>
                                 </Tooltip>
 
-                                <Tooltip content="Delete User">
+                                <Tooltip content="Deactivate User">
                                     <Button
                                         isIconOnly
                                         variant="light"
@@ -1366,7 +1373,7 @@ const UserTable = () => {
                                                 <div className="flex flex-col items-center gap-3">
                                                     <h3 className="text-xl font-semibold text-slate-800">
                                                         No Users Found
-                                                    </h3> 
+                                                    </h3>
                                                 </div>
                                             </div>
                                         }

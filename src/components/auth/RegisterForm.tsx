@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { Button, Select, SelectItem, Checkbox } from '@heroui/react';
 import {
     Mail,
@@ -93,7 +93,7 @@ const OTP_RESEND_COOLDOWN = 60;
 
 interface OtpStepProps {
     email: string;
-    onVerified: () => void;
+    onVerified: (verificationToken: string) => void;
     onBack: () => void;
 }
 
@@ -104,9 +104,12 @@ function OtpStep({ email, onVerified, onBack }: OtpStepProps) {
     const [cooldown, setCooldown] = useState(OTP_RESEND_COOLDOWN);
     const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    useState(() => {
+    useEffect(() => {
         startCooldown();
-    });
+        return () => {
+            if (cooldownRef.current) clearInterval(cooldownRef.current);
+        };
+    }, []);
 
     function startCooldown() {
         setCooldown(OTP_RESEND_COOLDOWN);
@@ -140,7 +143,7 @@ function OtpStep({ email, onVerified, onBack }: OtpStepProps) {
                 return;
             }
 
-            onVerified();
+            onVerified(data.verificationToken);
         } catch {
             setError('Something went wrong. Please try again.');
         } finally {
@@ -337,7 +340,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
         });
     };
 
-    const completeRegistration = () => {
+    const completeRegistration = (verificationToken: string) => {
         startTransition(async () => {
             try {
                 const formData = new FormData();
@@ -352,6 +355,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                     String(privacyPolicyAccepted)
                 );
                 formData.append('email', email);
+                formData.append('verificationToken', verificationToken);
                 formData.append('password', password);
                 formData.append('confirmPassword', confirmPassword);
                 formData.append('responderOrganization', responderOrganization);
@@ -377,7 +381,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                 }
 
                 setSuccessMessage(
-                    'Registration successful. You can now log in.'
+                    data.message ||
+                        'Registration successful. You can now log in.'
                 );
                 setStep('done');
                 onSuccess?.();
@@ -414,7 +419,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
                         Registration complete!
                     </p>
                     <p className="text-sm text-white/60">
-                        Your account has been verified and created.
+                        {successMessage ||
+                            'Your account has been verified and created.'}
                     </p>
                 </div>
 

@@ -103,6 +103,7 @@ export interface DashboardStats {
         severity?: string;
     }>;
     system: {
+        sources?: { irsEvents: string; redas: string };
         lastUpdated: string;
         status: string;
     };

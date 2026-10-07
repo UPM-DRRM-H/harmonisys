@@ -1,7 +1,8 @@
+import { withAccess } from '@/lib/apiAccess';
 import { NextResponse } from 'next/server';
 import { getUnahonFormsGroupedByClient } from '@/lib/action/unahon';
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get('page');
     const limit = searchParams.get('limit');
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
         );
     }
 
-    console.log('UNAHON FORMS API:', JSON.stringify(forms, null, 2));
     return NextResponse.json(forms);
 }
+
+export const GET = withAccess(handleGET, ['ADMIN', 'RESPONDER']);

@@ -1,4 +1,5 @@
 // hooks/useNotifications.ts
+import { useQueryIdentity } from '@/components/providers/QueryProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export interface AppNotification {
@@ -22,9 +23,12 @@ const POLL_INTERVAL = 30_000; // 30 s
 
 export function useNotifications() {
     const qc = useQueryClient();
+    const { scope } = useQueryIdentity();
+    const notificationKey = ['notifications', scope];
 
     const query = useQuery<NotificationsResponse>({
-        queryKey: ['notifications'],
+        queryKey: notificationKey,
+        enabled: scope !== 'guest' && scope !== 'uninitialized',
         queryFn: async () => {
             const res = await fetch('/api/notifications?limit=20');
             if (!res.ok) throw new Error('Failed to fetch notifications');
@@ -38,36 +42,49 @@ export function useNotifications() {
     // Mark a single notification as read
     const markRead = useMutation({
         mutationFn: async (id: string) => {
-            await fetch(`/api/notifications/${id}`, { method: 'PATCH' });
+            const response = await fetch(`/api/notifications/${id}`, {
+                method: 'PATCH',
+            });
+            if (!response.ok) throw new Error('Notification update failed.');
         },
         onMutate: async (id) => {
-            await qc.cancelQueries({ queryKey: ['notifications'] });
-            const prev = qc.getQueryData<NotificationsResponse>([
-                'notifications',
-            ]);
-            qc.setQueryData<NotificationsResponse>(['notifications'], (old) => {
+            await qc.cancelQueries({ queryKey: notificationKey });
+            const prev =
+                qc.getQueryData<NotificationsResponse>(notificationKey);
+            qc.setQueryData<NotificationsResponse>(notificationKey, (old) => {
                 if (!old) return old;
                 return {
                     notifications: old.notifications.map((n) =>
                         n.id === id ? { ...n, read: true } : n
                     ),
-                    unreadCount: Math.max(0, old.unreadCount - 1),
+                    unreadCount: Math.max(
+                        0,
+                        old.unreadCount -
+                            (old.notifications.some(
+                                (n) => n.id === id && !n.read
+                            )
+                                ? 1
+                                : 0)
+                    ),
                 };
             });
             return { prev };
         },
         onError: (_err, _id, ctx) => {
-            if (ctx?.prev) qc.setQueryData(['notifications'], ctx.prev);
+            if (ctx?.prev) qc.setQueryData(notificationKey, ctx.prev);
         },
     });
 
     // Mark all as read
     const markAllRead = useMutation({
         mutationFn: async () => {
-            await fetch('/api/notifications', { method: 'POST' });
+            const response = await fetch('/api/notifications', {
+                method: 'POST',
+            });
+            if (!response.ok) throw new Error('Notification update failed.');
         },
         onSuccess: () => {
-            qc.setQueryData<NotificationsResponse>(['notifications'], (old) => {
+            qc.setQueryData<NotificationsResponse>(notificationKey, (old) => {
                 if (!old) return old;
                 return {
                     notifications: old.notifications.map((n) => ({
@@ -83,9 +100,12 @@ export function useNotifications() {
     // Delete a single notification
     const deleteNotif = useMutation({
         mutationFn: async (id: string) => {
-            await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
+            const response = await fetch(`/api/notifications/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Notification removal failed.');
         },
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: notificationKey }),
     });
 
     return {
@@ -101,8 +121,10 @@ export function useNotifications() {
 
 // ── Pending-requests-specific hook (for admin / team-leader badge) ─────────────
 export function usePendingRequestsCount() {
+    const { scope } = useQueryIdentity();
     return useQuery<{ count: number }>({
-        queryKey: ['misalud-pending-count'],
+        queryKey: ['misalud-pending-count', scope],
+        enabled: scope.endsWith(':ADMIN') || scope.endsWith(':RESPONDER'),
         queryFn: async () => {
             const res = await fetch(
                 '/api/misalud/requests?status=PENDING&countOnly=true'

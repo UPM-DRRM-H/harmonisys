@@ -23,7 +23,10 @@ export async function GET(_req: Request, context: RouteContext) {
     try {
         const session = await auth();
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
         }
 
         const membership = await getLeaderTeam(session.user.id);
@@ -44,7 +47,10 @@ export async function GET(_req: Request, context: RouteContext) {
         });
 
         if (!schedule) {
-            return NextResponse.json({ error: 'Screening schedule not found' }, { status: 404 });
+            return NextResponse.json(
+                { error: 'Screening schedule not found' },
+                { status: 404 }
+            );
         }
 
         const teamMembers = await prisma.miSaludMembership.findMany({
@@ -68,7 +74,17 @@ export async function GET(_req: Request, context: RouteContext) {
 
         const submissions = await prisma.submission.findMany({
             where: {
-                team: membership.team.name,
+                OR: [
+                    { scheduleId: schedule.id },
+                    {
+                        scheduleId: null,
+                        teamId: membership.teamId,
+                        createdAt: {
+                            gte: schedule.validDate,
+                            lte: schedule.dueDate,
+                        },
+                    },
+                ],
                 createdAt: {
                     gte: schedule.validDate,
                     lte: schedule.dueDate,
@@ -78,7 +94,10 @@ export async function GET(_req: Request, context: RouteContext) {
             orderBy: { createdAt: 'desc' },
         });
 
-        const submissionByUser = new Map<string, (typeof submissions)[number]>();
+        const submissionByUser = new Map<
+            string,
+            (typeof submissions)[number]
+        >();
         for (const submission of submissions) {
             if (!submissionByUser.has(submission.userId)) {
                 submissionByUser.set(submission.userId, submission);
@@ -99,7 +118,10 @@ export async function GET(_req: Request, context: RouteContext) {
                 let status: WellnessDomainStatus = 'pending';
 
                 if (selectedOption) {
-                    status = getUrgencyFromSelectedOption(domain.id, selectedOption);
+                    status = getUrgencyFromSelectedOption(
+                        domain.id,
+                        selectedOption
+                    );
                 }
 
                 return {
@@ -129,12 +151,18 @@ export async function GET(_req: Request, context: RouteContext) {
             };
         });
 
-        const respondedCount = members.filter((member) => member.hasSubmitted).length;
-        const readyCount = members.filter((member) => member.overallStatus === 'ready').length;
+        const respondedCount = members.filter(
+            (member) => member.hasSubmitted
+        ).length;
+        const readyCount = members.filter(
+            (member) => member.overallStatus === 'ready'
+        ).length;
         const actionRecommendedCount = members.filter(
             (member) => member.overallStatus === 'action'
         ).length;
-        const urgentCount = members.filter((member) => member.overallStatus === 'urgent').length;
+        const urgentCount = members.filter(
+            (member) => member.overallStatus === 'urgent'
+        ).length;
 
         return NextResponse.json({
             schedule: {
@@ -160,7 +188,13 @@ export async function GET(_req: Request, context: RouteContext) {
             members,
         });
     } catch (error) {
-        console.error('GET /api/misalud/leader/screenings/[scheduleId]/report error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        console.error(
+            'GET /api/misalud/leader/screenings/[scheduleId]/report error:',
+            error
+        );
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
     }
 }

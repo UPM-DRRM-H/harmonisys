@@ -1,17 +1,11 @@
 // lib/mail/sendAdminActionEmail.ts
-import nodemailer from 'nodemailer';
+import { sendCheckedMail, mailFrom } from '@/lib/mail/transport';
+import { escapeEmailHtml } from '@/lib/mail/adminInbox';
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
-
-export type AdminActionType = 'ROLE_CHANGED' | 'MHPSS_CHANGED' | 'ACCOUNT_DELETED';
+export type AdminActionType =
+    | 'ROLE_CHANGED'
+    | 'MHPSS_CHANGED'
+    | 'ACCOUNT_DELETED';
 
 export interface AdminActionEmailPayload {
     to: string;
@@ -28,14 +22,14 @@ export interface AdminActionEmailPayload {
 const actionLabel: Record<AdminActionType, string> = {
     ROLE_CHANGED: 'Role Updated',
     MHPSS_CHANGED: 'MHPSS Level Updated',
-    ACCOUNT_DELETED: 'Account Deleted',
+    ACCOUNT_DELETED: 'Account Deactivated',
 };
 
 function buildBody(payload: AdminActionEmailPayload): string {
     const { userName, actionType, oldRole, newRole, oldMhpss, newMhpss } =
         payload;
 
-    const displayName = userName ?? 'User';
+    const displayName = escapeEmailHtml(userName ?? 'User');
     const timestamp = new Date().toLocaleString('en-PH', {
         timeZone: 'Asia/Manila',
         dateStyle: 'long',
@@ -104,7 +98,7 @@ function buildBody(payload: AdminActionEmailPayload): string {
     } else if (actionType === 'ACCOUNT_DELETED') {
         detailsHtml = `
             <p style="color:#374151;margin:0 0 8px">
-                The account for <strong>${displayName}</strong> has been permanently deleted by an administrator.
+                The account for <strong>${displayName}</strong> has been permanently deactivated by an administrator.
                 All associated data has been removed from the system.
             </p>
             <div style="
@@ -116,7 +110,7 @@ function buildBody(payload: AdminActionEmailPayload): string {
                 color:#991b1b;
                 font-size:0.9rem;
             ">
-                ⚠️ This action is <strong>irreversible</strong>. If this was a mistake, please contact your system administrator.
+                ⚠️ This action is <strong>reversible by an administrator</strong>. If this was a mistake, please contact your system administrator.
             </div>
         `;
     }
@@ -177,11 +171,11 @@ export async function sendAdminActionEmail(
     const subject: Record<AdminActionType, string> = {
         ROLE_CHANGED: `Your account role has been updated`,
         MHPSS_CHANGED: `Your MHPSS level has been updated`,
-        ACCOUNT_DELETED: `Your account has been deleted`,
+        ACCOUNT_DELETED: `Your account has been deactivated`,
     };
 
-    await transporter.sendMail({
-        from: process.env.SMTP_FROM,
+    await sendCheckedMail({
+        from: mailFrom(),
         to: payload.to,
         subject: subject[payload.actionType],
         html: buildBody(payload),

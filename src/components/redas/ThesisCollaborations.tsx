@@ -8,8 +8,12 @@ const ThesisCollaborations = () => {
 
     useEffect(() => {
         fetch('/api/redas?sheetName=Thesis Collaborations')
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) throw new Error('Source unavailable');
+                return res.json();
+            })
             .then((data) => {
+                if (!Array.isArray(data)) throw new Error('Invalid dataset');
                 setCollaborations(data);
                 setLoading(false);
             })
@@ -27,7 +31,7 @@ const ThesisCollaborations = () => {
                 <div className="text-center text-red-500">{error}</div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {collaborations.length > 1 ? (
+                    {collaborations.length > 0 ? (
                         collaborations.map((collab, index) => (
                             <div
                                 key={index}

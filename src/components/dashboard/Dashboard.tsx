@@ -239,9 +239,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
                 <div className="relative z-10">
                     {/* Top row: icon + title */}
                     <div className="flex items-center gap-4 mb-5">
-                        <div
-                            className="p-1 rounded-2xl group-hover:scale-105 transition-all duration-300"
-                        >
+                        <div className="p-1 rounded-2xl group-hover:scale-105 transition-all duration-300">
                             {icon}
                         </div>
 
@@ -283,28 +281,37 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     const router = useRouter();
     const { isOpen, onOpenChange, onOpen } = useDisclosure();
-    const { data: stats = null, isPending: loading } =
-        useQuery<DashboardStats | null>({
-            queryKey: ['dashboard-stats'],
-            queryFn: async () => {
-                const response = await fetch('/api/dashboard/stats');
-                const result = await response.json();
+    const {
+        data: stats = null,
+        isPending: loading,
+        isError: statsError,
+        refetch: retryStats,
+    } = useQuery<DashboardStats | null>({
+        queryKey: ['dashboard-stats', session?.user?.id, session?.user?.role],
+        queryFn: async () => {
+            const response = await fetch('/api/dashboard/stats');
+            const result = await response.json();
 
-                if (!result.success) {
-                    throw new Error(
-                        result.error || 'Failed to fetch dashboard stats'
-                    );
-                }
+            if (!result.success) {
+                throw new Error(
+                    result.error || 'Failed to fetch dashboard stats'
+                );
+            }
 
-                return result.data;
-            },
-            staleTime: 2 * 60 * 1000,
-        });
+            return result.data;
+        },
+        staleTime: 2 * 60 * 1000,
+    });
 
     const [selectedTab, setSelectedTab] = useState('overview');
     const [avatarError, setAvatarError] = useState(false);
     const [showActivitiesModal, setShowActivitiesModal] = useState(false);
-    const [selectedActivity, setSelectedActivity] = useState<{action: string; tool: string; user: string; timestamp: string} | null>(null);
+    const [selectedActivity, setSelectedActivity] = useState<{
+        action: string;
+        tool: string;
+        user: string;
+        timestamp: string;
+    } | null>(null);
 
     const [isResponderIdleOpen, setIsResponderIdleOpen] = useState(false);
     const [showResponderTools, setShowResponderTools] = useState(false);
@@ -315,8 +322,13 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     const isResponder = role === UserType.RESPONDER;
     const isStandard = role === UserType.STANDARD;
 
-    const { data: chartsData = null } = useQuery<DashboardChartsData | null>({
-        queryKey: ['dashboard-charts'],
+    const {
+        data: chartsData = null,
+        isLoading: chartsLoading,
+        isError: chartsError,
+        refetch: reloadCharts,
+    } = useQuery<DashboardChartsData | null>({
+        queryKey: ['dashboard-charts', session?.user?.id, session?.user?.role],
         queryFn: async () => {
             const response = await fetch('/api/dashboard/charts');
             const result = await response.json();
@@ -434,11 +446,19 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'IRS',
             description:
                 'Incident Reporting System for emergency drills and real-time incident tracking',
-            icon: <Image src="/iris_logo.png" alt="IRS" width={40} height={40} className="w-10 h-10 object-contain" />,
+            icon: (
+                <Image
+                    src="/iris_logo.png"
+                    alt="IRS"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-contain"
+                />
+            ),
             stats: stats?.overview.totalIncidents.toString() || '0',
             trend: stats?.recent.recentIncidents
-                ? `+${stats.recent.recentIncidents} this month`
-                : '0 this month',
+                ? `+${stats.recent.recentIncidents} in the last 30 days`
+                : '0 in the last 30 days',
             color: toolTheme.irs,
             href: '/overview/irs',
             status: 'operational' as const,
@@ -447,22 +467,49 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'REDAS',
             description:
                 'Rapid Earthquake Damage Assessment System training programs',
-            icon: <Image src="/redas/REDAS_logo_name.png" alt="REDAS" width={40} height={40} className="w-10 h-10 object-contain" />,
-            stats: stats?.overview.redasTrainingSessions.toString() || '0',
-            trend: 'Active training programs',
+            icon: (
+                <Image
+                    src="/redas/REDAS_logo_name.png"
+                    alt="REDAS"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-contain"
+                />
+            ),
+            stats:
+                stats?.system.sources?.redas === 'unavailable'
+                    ? 'Unavailable'
+                    : isAdmin
+                      ? stats?.overview.redasTrainingSessions.toString() || '—'
+                      : 'Preview',
+            trend:
+                stats?.system.sources?.redas === 'unavailable'
+                    ? 'Training data service unavailable'
+                    : 'Training information',
             color: toolTheme.redas,
             href: '/redas',
-            status: 'operational' as const,
+            status:
+                stats?.system.sources?.redas === 'unavailable'
+                    ? ('warning' as const)
+                    : ('operational' as const),
         },
         {
             title: 'Unahon',
             description:
                 'Mental health screening tool for disaster-affected communities',
-            icon: <Image src="/unahon_logo.png" alt="Unahon" width={80} height={80} className="w-16 h-16 object-contain rounded-full" />,
+            icon: (
+                <Image
+                    src="/unahon_logo.png"
+                    alt="Unahon"
+                    width={80}
+                    height={80}
+                    className="w-16 h-16 object-contain rounded-full"
+                />
+            ),
             stats: stats?.overview.totalUnahonAssessments.toString() || '0',
             trend: stats?.recent.recentUnahonAssessments
-                ? `+${stats.recent.recentUnahonAssessments} this month`
-                : '0 this month',
+                ? `+${stats.recent.recentUnahonAssessments} in the last 30 days`
+                : '0 in the last 30 days',
             color: toolTheme.unahon,
             href: '/unahon',
             status: 'operational' as const,
@@ -471,11 +518,19 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'Mi Salud',
             description:
                 'Mental and physical health monitoring for disaster responders',
-            icon: <Image src="/misalud_logo.png" alt="Mi Salud" width={40} height={40} className="w-10 h-10 object-contain" />,
+            icon: (
+                <Image
+                    src="/misalud_logo.png"
+                    alt="Mi Salud"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-contain"
+                />
+            ),
             stats: stats?.overview.totalQuestionnaires.toString() || '0',
             trend: stats?.recent.recentSubmissions
-                ? `+${stats.recent.recentSubmissions} this month`
-                : '0 this month',
+                ? `+${stats.recent.recentSubmissions} in the last 30 days`
+                : '0 in the last 30 days',
             color: toolTheme.misalud,
             href: isResponder ? '/misalud/team-requests' : '/misalud',
             status: 'operational' as const,
@@ -484,9 +539,17 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
             title: 'HazardHunter',
             description:
                 'Natural hazard assessment and risk analysis for Philippine locations',
-            icon: <Image src="/hazardHunter_logo.png" alt="HazardHunter" width={40} height={40} className="w-10 h-10 object-contain" />,
-            stats: 'Active',
-            trend: 'Real-time monitoring',
+            icon: (
+                <Image
+                    src="/hazardHunter_logo.png"
+                    alt="HazardHunter"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-contain"
+                />
+            ),
+            stats: 'On request',
+            trend: 'Assess selected locations',
             color: toolTheme.hazardhunter,
             href: '/hazardhunter',
             status: 'operational' as const,
@@ -747,6 +810,27 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
     // ✅ metrics grid cols: Standard=3, Responder=4, Admin handled separately
     const metricsGridCols = isStandard ? 'lg:grid-cols-2' : 'lg:grid-cols-4';
 
+    if (statsError)
+        return (
+            <div
+                role="alert"
+                className="mx-auto my-10 max-w-3xl rounded-2xl border border-amber-200 bg-amber-50 p-6"
+            >
+                <h1 className="text-xl font-bold text-amber-950">
+                    Dashboard data could not be loaded
+                </h1>
+                <p className="mt-3 text-sm text-amber-900">
+                    Check your connection and retry. Your existing records have
+                    not been changed.
+                </p>
+                <button
+                    onClick={() => void retryStats()}
+                    className="mt-4 rounded-lg bg-[#77152d] px-4 py-2 font-semibold text-white"
+                >
+                    Retry dashboard
+                </button>
+            </div>
+        );
     return (
         <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#fff4f4] via-[#ffeaea] to-[#fff7f7]">
             <div className="absolute inset-0 opacity-35">
@@ -946,7 +1030,9 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                             {/* Mobile view all button */}
                                             <button
                                                 className="sm:hidden text-xs font-semibold text-[#7A0C1E] underline underline-offset-2"
-                                                onClick={() => setShowActivitiesModal(true)}
+                                                onClick={() =>
+                                                    setShowActivitiesModal(true)
+                                                }
                                             >
                                                 View all
                                             </button>
@@ -960,7 +1046,11 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                                     .map((activity, index) => (
                                                         <div
                                                             key={index}
-                                                            onClick={() => setSelectedActivity(activity)}
+                                                            onClick={() =>
+                                                                setSelectedActivity(
+                                                                    activity
+                                                                )
+                                                            }
                                                             className="
                                                             group relative flex items-center gap-4
                                                             rounded-2xl border border-rose-200/70
@@ -1035,7 +1125,12 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                     </div>
                                 }
                             >
-                                <DashboardCharts chartsData={chartsData} />
+                                <DashboardCharts
+                                    chartsData={chartsData}
+                                    loading={chartsLoading}
+                                    error={chartsError}
+                                    onRetry={() => void reloadCharts()}
+                                />
                             </Tab>
                         )}
                     </Tabs>
@@ -1061,7 +1156,11 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                                         .map((activity, index) => (
                                             <div
                                                 key={index}
-                                                onClick={() => setSelectedActivity(activity)}
+                                                onClick={() =>
+                                                    setSelectedActivity(
+                                                        activity
+                                                    )
+                                                }
                                                 className="
                                                 group relative flex items-center gap-4
                                                 rounded-2xl border border-rose-200/70
@@ -1301,33 +1400,67 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                     >
                         <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-slate-100">
                             <h3 className="text-xl font-black text-slate-900">
-                                {isPersonalDashboard ? 'My Recent Activities' : 'Recent Activities'}
+                                {isPersonalDashboard
+                                    ? 'My Recent Activities'
+                                    : 'Recent Activities'}
                             </h3>
                             <button
                                 onClick={() => setShowActivitiesModal(false)}
                                 className="p-2 rounded-full hover:bg-slate-100 transition-colors"
                             >
-                                <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                <svg
+                                    className="w-5 h-5 text-slate-500"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
                                 </svg>
                             </button>
                         </div>
                         <div className="p-4 space-y-3">
-                            {activitiesToShow.length ? activitiesToShow.slice(0, 10).map((activity, index) => (
-                                <div key={index} onClick={() => { setSelectedActivity(activity); setShowActivitiesModal(false); }} className="flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3 cursor-pointer hover:bg-rose-100/50 transition-colors">
-                                    <div className="shrink-0 p-2 rounded-xl bg-gradient-to-br from-[#FBE4E8] to-[#F6D4DA] border border-rose-100">
-                                        <Clock className="w-4 h-4 text-[#B0122B]" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-slate-900 text-sm leading-snug">{activity.action}</p>
-                                        <p className="text-xs text-slate-600 mt-0.5">
-                                            <span className="font-medium text-[#7A0C1E]">{activity.tool}</span> • {activity.user}
-                                        </p>
-                                        <p className="text-xs text-slate-400 mt-0.5">{formatTimeAgo(activity.timestamp)}</p>
-                                    </div>
-                                </div>
-                            )) : (
-                                <p className="text-center text-slate-500 py-8 text-sm">No recent activities.</p>
+                            {activitiesToShow.length ? (
+                                activitiesToShow
+                                    .slice(0, 10)
+                                    .map((activity, index) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => {
+                                                setSelectedActivity(activity);
+                                                setShowActivitiesModal(false);
+                                            }}
+                                            className="flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3 cursor-pointer hover:bg-rose-100/50 transition-colors"
+                                        >
+                                            <div className="shrink-0 p-2 rounded-xl bg-gradient-to-br from-[#FBE4E8] to-[#F6D4DA] border border-rose-100">
+                                                <Clock className="w-4 h-4 text-[#B0122B]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-slate-900 text-sm leading-snug">
+                                                    {activity.action}
+                                                </p>
+                                                <p className="text-xs text-slate-600 mt-0.5">
+                                                    <span className="font-medium text-[#7A0C1E]">
+                                                        {activity.tool}
+                                                    </span>{' '}
+                                                    • {activity.user}
+                                                </p>
+                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                    {formatTimeAgo(
+                                                        activity.timestamp
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))
+                            ) : (
+                                <p className="text-center text-slate-500 py-8 text-sm">
+                                    No recent activities.
+                                </p>
                             )}
                         </div>
                     </div>
@@ -1345,31 +1478,68 @@ const Dashboard: React.FC<DashboardProps> = ({ session }) => {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] px-6 py-5 flex items-center justify-between">
-                            <h3 className="text-lg font-black text-white">Activity Details</h3>
-                            <button onClick={() => setSelectedActivity(null)} className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <h3 className="text-lg font-black text-white">
+                                Activity Details
+                            </h3>
+                            <button
+                                onClick={() => setSelectedActivity(null)}
+                                className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                            >
+                                <svg
+                                    className="w-4 h-4 text-white"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
                                 </svg>
                             </button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div className="rounded-2xl bg-rose-50 border border-rose-100 p-4 space-y-3">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Action</p>
-                                    <p className="font-bold text-slate-900">{selectedActivity.action}</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                                        Action
+                                    </p>
+                                    <p className="font-bold text-slate-900">
+                                        {selectedActivity.action}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tool</p>
-                                    <p className="font-semibold text-[#7A0C1E]">{selectedActivity.tool}</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                                        Tool
+                                    </p>
+                                    <p className="font-semibold text-[#7A0C1E]">
+                                        {selectedActivity.tool}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">User</p>
-                                    <p className="font-medium text-slate-800">{selectedActivity.user}</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                                        User
+                                    </p>
+                                    <p className="font-medium text-slate-800">
+                                        {selectedActivity.user}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Time</p>
-                                    <p className="font-medium text-slate-800">{formatTimeAgo(selectedActivity.timestamp)}</p>
-                                    <p className="text-xs text-slate-400 mt-0.5">{new Date(selectedActivity.timestamp).toLocaleString()}</p>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                                        Time
+                                    </p>
+                                    <p className="font-medium text-slate-800">
+                                        {formatTimeAgo(
+                                            selectedActivity.timestamp
+                                        )}
+                                    </p>
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                        {new Date(
+                                            selectedActivity.timestamp
+                                        ).toLocaleString()}
+                                    </p>
                                 </div>
                             </div>
                             <button

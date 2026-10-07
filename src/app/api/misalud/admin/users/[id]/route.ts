@@ -1,3 +1,4 @@
+import { withAccess } from '@/lib/apiAccess';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -7,7 +8,7 @@ type Params = {
     }>;
 };
 
-export async function PATCH(req: Request, context: Params) {
+async function handlePATCH(req: Request, context: Params) {
     try {
         const { id } = await context.params;
         const { teamName } = await req.json();
@@ -31,9 +32,16 @@ export async function PATCH(req: Request, context: Params) {
             );
         }
 
-        const updatedTeam = await prisma.miSaludTeam.update({
-            where: { id: membership.teamId },
-            data: { name: teamName.trim() },
+        const updatedTeam = await prisma.$transaction(async (tx) => {
+            const updated = await tx.miSaludTeam.update({
+                where: { id: membership.teamId },
+                data: { name: teamName.trim() },
+            });
+            await tx.submission.updateMany({
+                where: { teamId: membership.teamId },
+                data: { team: updated.name },
+            });
+            return updated;
         });
 
         return NextResponse.json({
@@ -50,7 +58,7 @@ export async function PATCH(req: Request, context: Params) {
     }
 }
 
-export async function DELETE(_req: Request, context: Params) {
+async function handleDELETE(_req: Request, context: Params) {
     try {
         const { id } = await context.params;
 
@@ -65,25 +73,18 @@ export async function DELETE(_req: Request, context: Params) {
             );
         }
 
-        await prisma.$transaction([
-            prisma.questionResponse.deleteMany({
-                where: {
-                    submission: {
-                        userId: membership.userId,
-                    },
+        if (membership.role === 'TEAM_LEADER')
+            return NextResponse.json(
+                {
+                    error: 'Assign another team leader before removing this membership.',
                 },
-            }),
-
-            prisma.submission.deleteMany({
-                where: {
-                    userId: membership.userId,
-                },
-            }),
-
-            prisma.miSaludMembership.delete({
-                where: { id },
-            }),
-        ]);
+                { status: 409 }
+            );
+        // Preserve health history when removing access to a team.
+        await prisma.miSaludMembership.update({
+            where: { id },
+            data: { status: 'REJECTED' },
+        });
 
         return NextResponse.json({
             success: true,
@@ -97,3 +98,7 @@ export async function DELETE(_req: Request, context: Params) {
         );
     }
 }
+
+export const PATCH = withAccess(handlePATCH, ['ADMIN']);
+
+export const DELETE = withAccess(handleDELETE, ['ADMIN']);

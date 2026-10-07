@@ -1,17 +1,20 @@
 'use server';
-
-import { AdminActionEmailPayload, sendAdminActionEmail } from "../mail/sendActionEmail";
-
-// lib/action/adminEmail.ts
-
-
+import { requireUser } from '@/lib/access';
+import { prisma } from '@/lib/prisma';
+import { enqueueEmail, deliverEmail } from '@/lib/mail/outbox';
+import type { AdminActionEmailPayload } from '@/lib/mail/sendActionEmail';
+import { randomUUID } from 'node:crypto';
 export async function notifyAdminAction(
     payload: AdminActionEmailPayload
 ): Promise<void> {
-    try {
-        await sendAdminActionEmail(payload);
-    } catch (err) {
-        // Log but never throw — a failed notification must not block the admin action
-        console.error('[notifyAdminAction] Failed to send email:', err);
-    }
+    await requireUser(['ADMIN']);
+    const delivery = await prisma.$transaction((tx) =>
+        enqueueEmail(
+            tx,
+            'admin-action:' + randomUUID(),
+            'ADMIN_ACTION',
+            payload
+        )
+    );
+    await deliverEmail(delivery.id);
 }

@@ -19,6 +19,7 @@ model User {
   updatedAt                  DateTime                    @updatedAt
   competency                 Int?
   role                       UserType                    @default(STANDARD)
+  active                     Boolean                     @default(true)
   firstName                  String?
   gender                     Gender?
   lastName                   String?
@@ -43,26 +44,74 @@ model User {
   notifications              Notification[]
   unahonReassessmentAssigned UnahonReassessmentRequest[] @relation("UnahonReassessmentRequestedBy")
   unahonReassessmentRequests UnahonReassessmentRequest[] @relation("UnahonReassessmentUser")
+  certificateUploads         CertificateUpload[]
+  screeningSchedulesCreated  MiSaludScreeningSchedule[]  @relation("ScreeningCreator")
+  teamsReviewed              MiSaludTeam[]               @relation("TeamReviewer")
+  incidentsReviewed          Incident[]                  @relation("IncidentReviewer")
 }
 
 model RoleChangeRequest {
-  id                               String        @id @default(cuid())
+  id                               String             @id @default(cuid())
   userId                           String
   fromRole                         UserType
   toRole                           UserType
-  status                           RequestStatus @default(PENDING)
-  createdAt                        DateTime      @default(now())
+  status                           RequestStatus      @default(PENDING)
+  createdAt                        DateTime           @default(now())
   reviewedAt                       DateTime?
   reviewedById                     String?
-  updatedAt                        DateTime      @default(now()) @updatedAt
+  updatedAt                        DateTime           @default(now()) @updatedAt
   requestedMhpssLevel              MhpssLevel?
   requestedMhpssCertificateFileUrl String?
   requestedResponderOrganization   String?
-  reviewedBy                       User?         @relation("ReviewedBy", fields: [reviewedById], references: [id])
-  user                             User          @relation("RoleChangeUser", fields: [userId], references: [id], onDelete: Cascade)
+  rejectionReason                  String?
+  certificateId                    String?
+  certificate                      CertificateUpload? @relation(fields: [certificateId], references: [id], onDelete: Restrict)
+  reviewedBy                       User?              @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  user                             User               @relation("RoleChangeUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
+}
+
+model RegistrationOtp {
+  email           String    @id
+  codeHash        String
+  expiresAt       DateTime
+  attempts        Int       @default(0)
+  lastSentAt      DateTime  @default(now())
+  sendCount       Int       @default(1)
+  windowStartedAt DateTime  @default(now())
+  proofHash       String?   @unique
+  proofExpiresAt  DateTime?
+}
+
+model EmailDelivery {
+  id            String    @id @default(cuid())
+  key           String    @unique
+  kind          String
+  payload       Json
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  leaseUntil    DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
+
+model CertificateUpload {
+  id           String              @id @default(cuid())
+  userId       String
+  filename     String
+  contentType  String
+  bytes        Bytes
+  createdAt    DateTime            @default(now())
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleRequests RoleChangeRequest[]
+
+  @@index([userId])
 }
 
 model Account {
@@ -116,7 +165,7 @@ model Authenticator {
 }
 
 model Incident {
-  id                  String           @id @default(cuid())
+  id                  String               @id @default(cuid())
   location            String
   date                DateTime
   summary             String
@@ -124,22 +173,36 @@ model Incident {
   category            IncidentCategory
   reporter            String?
   contact             String?
-  attachments         String[]         @default([])
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  attachments         String[]             @default([])
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   teamDeployed        String
   otherCategoryDetail String?
   reviewNote          String?
   reviewedAt          DateTime?
   reviewedBy          String?
-  status              IncidentStatus   @default(PENDING)
+  reviewedByUserId    String?
+  reviewer            User?                @relation("IncidentReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  status              IncidentStatus       @default(PENDING)
+  storedAttachments   IncidentAttachment[]
   userId              String
-  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
   @@index([status])
   @@index([teamDeployed])
+}
+
+model IncidentAttachment {
+  id          String   @id @default(cuid())
+  incidentId  String
+  filename    String
+  contentType String
+  bytes       Bytes
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
 }
 
 model Unahon {
@@ -196,17 +259,23 @@ model PlaceCoordinate {
 }
 
 model Submission {
-  id        String             @id @default(cuid())
-  name      String
-  date      DateTime
-  team      String
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  userId    String
-  responses QuestionResponse[]
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String                    @id @default(cuid())
+  name       String
+  date       DateTime
+  team       String
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+  userId     String
+  teamId     String?
+  scheduleId String?
+  linkedTeam MiSaludTeam?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  schedule   MiSaludScreeningSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  responses  QuestionResponse[]
+  user       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, scheduleId])
   @@index([userId])
+  @@index([teamId])
 }
 
 model QuestionResponse {
@@ -219,18 +288,20 @@ model QuestionResponse {
 }
 
 model MiSaludTeam {
-  id                String                      @id @default(cuid())
-  name              String                      @unique
-  leaderUserId      String
-  status            RequestStatus               @default(PENDING)
-  createdAt         DateTime                    @default(now())
-  updatedAt         DateTime                    @updatedAt
-  reviewedAt        DateTime?
-  reviewedById      String?
-  memberships       MiSaludMembership[]
-  requests          MiSaludRequest[]
+  id                 String                     @id @default(cuid())
+  name               String                     @unique
+  leaderUserId       String
+  status             RequestStatus              @default(PENDING)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  reviewedAt         DateTime?
+  reviewedById       String?
+  reviewer           User?                      @relation("TeamReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  memberships        MiSaludMembership[]
+  requests           MiSaludRequest[]
   screeningSchedules MiSaludScreeningSchedule[]
-  leader            User                        @relation("MiSaludTeamLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
+  submissions        Submission[]
+  leader             User                       @relation("MiSaludTeamLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
 }
 
 model MiSaludMembership {
@@ -381,16 +452,18 @@ enum NotificationType {
 }
 
 model MiSaludScreeningSchedule {
-  id             String                  @id @default(cuid())
-  teamId         String
-  createdById    String
-  screeningType  MiSaludScreeningType
-  validDate      DateTime
-  dueDate        DateTime
-  status         ScreeningScheduleStatus @default(ACTIVE)
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  team           MiSaludTeam             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  id            String                  @id @default(cuid())
+  teamId        String
+  createdById   String
+  creator       User                    @relation("ScreeningCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  screeningType MiSaludScreeningType
+  validDate     DateTime
+  dueDate       DateTime
+  status        ScreeningScheduleStatus @default(ACTIVE)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  team          MiSaludTeam             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  submissions   Submission[]
 
   @@index([teamId])
   @@index([status])
@@ -407,4 +480,14 @@ enum ScreeningScheduleStatus {
   ACTIVE
   EXPIRED
   CANCELLED
+}
+
+// Imported legacy archives; the runtime reads Supabase exclusively.
+model LegacyDatasetRecord {
+  source String
+  collection String
+  recordId String
+  payload Json
+  importedAt DateTime @default(now())
+  @@id([source, collection, recordId])
 }

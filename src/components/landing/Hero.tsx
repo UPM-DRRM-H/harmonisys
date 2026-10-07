@@ -58,17 +58,14 @@ const Hero = ({ session }: { session: Session | null }) => {
                     {/* Headline inline*/}
                     <h1
                         className="mt-6 font-black
-                        text-[2.2rem]
-                        sm:text-[3.9rem]
-                        md:text-[4.6rem]
-                        lg:text-[5.6rem]
+                        text-[clamp(2rem,5.5vw,5rem)]
                         tracking-tight leading-[1.05]
                         animate-fadeUp"
                     >
-                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent block sm:block lg:inline">
+                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent block sm:block lg:inline whitespace-nowrap">
                             HARMONIZED
                         </span>{' '}
-                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent block sm:block lg:inline">
+                        <span className="bg-gradient-to-r from-[#5B0A0A] via-[#7A1111] to-[#A11B1B] bg-clip-text text-transparent block sm:block lg:inline whitespace-nowrap">
                             DRRM-H
                         </span>
                     </h1>

@@ -289,6 +289,7 @@ const Unahon: React.FC<UnahonProps> = ({
 
     const [currentIndex, setCurrentIndex] = useState(0);
 
+    const [submissionError, setSubmissionError] = useState<string | null>(null);
     const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
@@ -330,17 +331,22 @@ const Unahon: React.FC<UnahonProps> = ({
     };
 
     const handleSubmit = async () => {
+        setSubmissionError(null);
         try {
-            await saveUnahonForm({ ...confidentialForm, checklist });
-
-            if (isReassessment) {
-                await fetch('/api/unahon/reassess/complete', {
-                    method: 'PATCH',
-                });
-            }
-        } catch {
-            console.error('Error saving Unahon form');
-        } finally {
+            await saveUnahonForm({
+                ...confidentialForm,
+                assessmentType: isReassessment
+                    ? AssessmentType.RE_ASSESSMENT
+                    : confidentialForm.assessmentType,
+                checklist,
+            });
+            setShowSuccessDialog(true);
+        } catch (error) {
+            setSubmissionError(
+                error instanceof Error
+                    ? error.message
+                    : 'Assessment was not saved. Please retry.'
+            );
             setShowSuccessDialog(true);
         }
     };
@@ -1149,9 +1155,16 @@ const Unahon: React.FC<UnahonProps> = ({
 
                 <SuccessDialog
                     open={showSuccessDialog}
+                    variant={submissionError ? 'warning' : 'success'}
+                    title={
+                        submissionError ? 'Assessment not saved' : 'Success!'
+                    }
+                    message={
+                        submissionError || 'Assessment saved successfully.'
+                    }
                     onClose={() => {
                         setShowSuccessDialog(false);
-                        handleExitAssessment();
+                        if (!submissionError) handleExitAssessment();
                     }}
                 />
 

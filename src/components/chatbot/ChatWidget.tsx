@@ -1,435 +1,366 @@
 'use client';
-
-import { type FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Button, Card, CardBody } from '@heroui/react';
 import {
-    AlertTriangle,
-    ChevronLeft,
-    Loader2,
     MessageCircle,
-    Send,
-    ShieldCheck,
     X,
+    Send,
+    Loader2,
+    ArrowLeft,
+    BookOpen,
+    AlertTriangle,
 } from 'lucide-react';
 import {
     PREDEFINED_QUESTIONS,
     PredefinedQuestion,
     QuestionCategory,
 } from '@/lib/ai/predefinedQuestions';
-
-const CATEGORY_LABELS: Record<QuestionCategory, string> = {
-    general: 'General',
+import { guideReply } from '@/lib/ai/guideReply';
+const LABELS: Record<QuestionCategory, string> = {
+    general: 'Account & help',
     irs: 'IRS',
     redas: 'REDAS',
     unahon: 'Unahon',
     misalud: 'Mi Salud',
     hazardhunter: 'HazardHunter',
 };
-
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as QuestionCategory[];
-
-type ChatMessage = {
-    role: 'user' | 'assistant';
-    content: string;
-};
-
-const THEMES = {
-    general: {
-        headerGradient: 'linear-gradient(135deg, #5B0A0A, #7A1111, #A11B1B)',
-        userBubble: '#951515',
-        accent: '#8B1538',
-        alertBg: 'rgba(139, 21, 56, 0.10)',
-        alertBorder: 'rgba(139, 21, 56, 0.20)',
-    },
-    irs: {
-        headerGradient: 'linear-gradient(135deg, #4A0A18, #6B0F25, #8B1538)',
-        userBubble: '#6B0F25',
-        accent: '#8A002A',
-        alertBg: 'rgba(74, 10, 24, 0.08)',
-        alertBorder: 'rgba(74, 10, 24, 0.18)',
-    },
-    unahon: {
-        headerGradient: 'linear-gradient(135deg, #7A0C1E, #991B1B, #B91C1C)',
-        userBubble: '#991B1B',
-        accent: '#B40000',
-        alertBg: 'rgba(185, 28, 28, 0.08)',
-        alertBorder: 'rgba(185, 28, 28, 0.18)',
-    },
-    misalud: {
-        headerGradient: 'linear-gradient(135deg, #065F46, #047857, #10B981)',
-        userBubble: '#047857',
-        accent: '#006745',
-        alertBg: 'rgba(16, 185, 129, 0.10)',
-        alertBorder: 'rgba(16, 185, 129, 0.22)',
-    },
-    hazardhunter: {
-        headerGradient: 'linear-gradient(135deg, #5A3A1A, #7B5A3A, #9D7C5A)',
-        userBubble: '#7B5A3A',
-        accent: '#62380F',
-        alertBg: 'rgba(90, 58, 26, 0.08)',
-        alertBorder: 'rgba(90, 58, 26, 0.18)',
-    },
-    redas: {
-        headerGradient: 'linear-gradient(135deg, #1E3A8A, #1D4ED8, #0284C7)',
-        userBubble: '#1D4ED8',
-        accent: '#0074AE',
-        alertBg: 'rgba(2, 132, 199, 0.10)',
-        alertBorder: 'rgba(2, 132, 199, 0.22)',
-    },
-};
-
-function categoryFromPath(pathname: string): QuestionCategory {
-    const path = pathname.toLowerCase();
-    if (path.includes('/irs')) return 'irs';
-    if (path.includes('/redas')) return 'redas';
-    if (path.includes('/unahon')) return 'unahon';
-    if (path.includes('/misalud')) return 'misalud';
-    if (path.includes('/hazardhunter')) return 'hazardhunter';
-    return 'general';
-}
-
+type Reply = ReturnType<typeof guideReply>;
+type Message = { role: 'user' | 'assistant'; content: string; reply?: Reply };
 export default function ChatWidget() {
     const pathname = usePathname() || '/';
-    const pageCategory = categoryFromPath(pathname);
-    const [open, setOpen] = useState(false);
-    const [category, setCategory] = useState<QuestionCategory>(pageCategory);
-    const [selected, setSelected] = useState<PredefinedQuestion | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
-    const theme = THEMES[pageCategory];
-
+    const pageCategory = (Object.keys(LABELS).find(
+        (c) => c !== 'general' && pathname.toLowerCase().includes(c)
+    ) || 'general') as QuestionCategory;
+    const [open, setOpen] = useState(false),
+        [category, setCategory] = useState<QuestionCategory>(pageCategory),
+        [messages, setMessages] = useState<Message[]>([]),
+        [input, setInput] = useState(''),
+        [loading, setLoading] = useState(false);
+    const field = useRef<HTMLInputElement>(null),
+        launcher = useRef<HTMLButtonElement>(null),
+        end = useRef<HTMLDivElement>(null),
+        panel = useRef<HTMLElement>(null),
+        abort = useRef<AbortController | null>(null),
+        generation = useRef(0);
+    const previousOpen = useRef(false);
     const questions = PREDEFINED_QUESTIONS.filter(
-        (item) => item.category === category
+        (q) => q.category === category
     );
-
-    function chooseCategory(nextCategory: QuestionCategory) {
-        setCategory(nextCategory);
-        setSelected(null);
-        setMessages([]);
+    useEffect(() => {
+        if (open) field.current?.focus();
+        else if (previousOpen.current) launcher.current?.focus();
+        previousOpen.current = open;
+    }, [open]);
+    useEffect(() => {
+        end.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, [messages, loading]);
+    useEffect(() => {
+        if (open && !loading) field.current?.focus();
+    }, [open, loading]);
+    useEffect(() => () => abort.current?.abort(), []);
+    useEffect(() => {
+        const clear = () => {
+            abort.current?.abort();
+            generation.current++;
+            setMessages([]);
+            setInput('');
+            setLoading(false);
+        };
+        window.addEventListener('harmonisys:session-change', clear);
+        return () =>
+            window.removeEventListener('harmonisys:session-change', clear);
+    }, []);
+    function close() {
+        setOpen(false);
+        launcher.current?.focus();
     }
-
-    function handleOpen() {
-        setCategory(pageCategory);
-        setSelected(null);
+    function reset() {
+        abort.current?.abort();
+        generation.current++;
+        setLoading(false);
         setMessages([]);
         setInput('');
-        setOpen(true);
+        field.current?.focus();
     }
-
-    function resetConversation() {
-        setSelected(null);
-        setMessages([]);
+    async function ask(value: string, question?: PredefinedQuestion) {
+        const message = value.trim();
+        if (!message || loading) return;
+        setMessages((old) => [...old, { role: 'user', content: message }]);
         setInput('');
-    }
-
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        const message = input.trim();
-        if (!message || isLoading) return;
-
-        const history = messages.slice(-6);
-        setSelected(null);
-        setMessages((current) => [
-            ...current,
-            { role: 'user', content: message },
-        ]);
-        setInput('');
-        setIsLoading(true);
-
+        setLoading(true);
+        const token = ++generation.current;
+        abort.current?.abort();
+        const controller = new AbortController();
+        abort.current = controller;
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        let reply: Reply;
         try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, pathname, history }),
-            });
-            const data = await response.json().catch(() => null);
-            const reply =
-                typeof data?.reply === 'string' && data.reply.trim()
-                    ? data.reply.trim()
-                    : 'The assistant is temporarily unavailable. Please try again or choose a suggested question.';
-
-            setMessages((current) => [
-                ...current,
-                { role: 'assistant', content: reply },
-            ]);
+            if (question || !navigator.onLine)
+                reply = guideReply(question?.question || message, category);
+            else {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, category }),
+                    signal: controller.signal,
+                });
+                if (!response.ok) throw new Error('Guide request failed');
+                reply = await response.json();
+                if (typeof reply.reply !== 'string')
+                    throw new Error('Invalid guide response');
+            }
         } catch {
-            setMessages((current) => [
-                ...current,
-                {
-                    role: 'assistant',
-                    content:
-                        'The assistant is temporarily unavailable. Please check your connection and try again.',
-                },
-            ]);
+            reply = guideReply(message, category);
         } finally {
-            setIsLoading(false);
+            clearTimeout(timeout);
+        }
+        if (token === generation.current) {
+            setMessages((old) => [
+                ...old,
+                { role: 'assistant', content: reply!.reply, reply },
+            ]);
+            setLoading(false);
+            field.current?.focus();
         }
     }
-
+    function submit(e: FormEvent) {
+        e.preventDefault();
+        void ask(input);
+    }
+    function keydown(e: React.KeyboardEvent<HTMLElement>) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            close();
+        }
+        if (e.key === 'Tab') {
+            const nodes = panel.current?.querySelectorAll<HTMLElement>(
+                'button:not(:disabled),input,a[href]'
+            );
+            if (!nodes?.length) return;
+            const first = nodes[0],
+                last = nodes[nodes.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    }
     return (
         <>
             {!open && (
-                <div className="fixed bottom-5 right-5 z-50">
-                    <Button
-                        onPress={handleOpen}
-                        className="h-12 w-12 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.35),0_0_10px_rgba(255,255,255,0.45)] transition hover:shadow-[0_6px_18px_rgba(0,0,0,0.45),0_0_14px_rgba(255,255,255,0.6)]"
-                        style={{
-                            backgroundColor: theme.userBubble,
-                            color: 'white',
-                        }}
-                        isIconOnly
-                        aria-label="Open Harmonisys guide"
-                    >
-                        <MessageCircle className="h-6 w-6" />
-                    </Button>
-                </div>
+                <button
+                    ref={launcher}
+                    onClick={() => {
+                        setOpen(true);
+                        setCategory(pageCategory);
+                    }}
+                    className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#77152d] text-white shadow-lg hover:bg-[#591021] focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-[#77152d]"
+                    aria-label="Open Harmonisys guide"
+                >
+                    <MessageCircle aria-hidden className="h-6 w-6" />
+                </button>
             )}
-
             {open && (
-                <div className="fixed bottom-5 right-5 z-50 w-full max-w-[390px] px-3 sm:px-0">
-                    <Card className="overflow-hidden rounded-3xl border border-slate-200 shadow-xl">
-                        <div
-                            className="flex items-center justify-between px-4 py-3 text-white"
-                            style={{ background: theme.headerGradient }}
-                        >
-                            <div className="flex items-center gap-2">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/15">
-                                    <ShieldCheck className="h-5 w-5" />
-                                </div>
-                                <div className="leading-tight">
-                                    <p className="text-sm font-extrabold">
-                                        DRRM-H Quick Guide
-                                    </p>
-                                    <p className="text-[11px] text-white/80">
-                                        Quick answers with AI assistance
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setOpen(false)}
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black/20 text-white shadow-sm transition hover:bg-black/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                                aria-label="Close DRRM-H Quick Guide"
-                                title="Close"
-                            >
-                                <X
-                                    className="h-5 w-5"
-                                    strokeWidth={3}
-                                    aria-hidden="true"
-                                />
-                            </button>
+                <section
+                    ref={panel}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="chat-heading"
+                    onKeyDown={keydown}
+                    className="fixed bottom-[max(.75rem,env(safe-area-inset-bottom))] right-3 z-[70] flex max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+                >
+                    <header className="flex shrink-0 items-center justify-between bg-[#77152d] px-5 py-4 text-white">
+                        <div>
+                            <h2 id="chat-heading" className="font-bold">
+                                DRRM-H App Guide
+                            </h2>
+                            <p className="text-xs text-white/80">
+                                Manual-based help, available offline
+                            </p>
                         </div>
-
-                        <CardBody className="p-0">
-                            <div
-                                className="flex gap-2 border-b px-4 py-3"
-                                style={{
-                                    background: theme.alertBg,
-                                    borderColor: theme.alertBorder,
-                                }}
-                            >
-                                <AlertTriangle
-                                    className="mt-0.5 h-5 w-5 shrink-0"
-                                    style={{ color: theme.accent }}
-                                />
-                                <p
-                                    className="text-xs leading-relaxed"
-                                    style={{ color: theme.accent }}
-                                >
-                                    For life-threatening emergencies, contact
-                                    local emergency services immediately.
+                        <button
+                            onClick={close}
+                            aria-label="Close Harmonisys guide"
+                            className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </header>
+                    <p className="flex shrink-0 gap-2 border-b border-amber-100 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-950">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        For guidance only. For immediate danger, contact
+                        emergency services. Do not share patient details,
+                        passwords or codes.
+                    </p>
+                    <div
+                        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+                        style={{ height: 'min(410px,50dvh)' }}
+                    >
+                        {messages.length === 0 ? (
+                            <>
+                                <p className="mb-3 text-sm text-slate-600">
+                                    Hello! Choose a topic or ask how to use a
+                                    feature.
                                 </p>
-                            </div>
-
-                            <div className="h-[430px] overflow-y-auto bg-white px-4 py-4">
-                                {selected ? (
-                                    <div>
+                                <div
+                                    className="mb-5 flex flex-wrap gap-2"
+                                    aria-label="Help topics"
+                                >
+                                    {(
+                                        Object.keys(
+                                            LABELS
+                                        ) as QuestionCategory[]
+                                    ).map((c) => (
                                         <button
-                                            type="button"
-                                            onClick={resetConversation}
-                                            className="mb-4 flex items-center gap-1 text-xs font-semibold"
-                                            style={{ color: theme.accent }}
+                                            key={c}
+                                            aria-pressed={category === c}
+                                            onClick={() => setCategory(c)}
+                                            className={
+                                                'rounded-full border px-3 py-2 text-xs font-semibold ' +
+                                                (category === c
+                                                    ? 'border-[#77152d] bg-[#77152d] text-white'
+                                                    : 'border-slate-200 text-slate-700 hover:bg-rose-50')
+                                            }
                                         >
-                                            <ChevronLeft className="h-4 w-4" />
-                                            Ask another question
+                                            {LABELS[c]}
                                         </button>
-                                        <div
-                                            className="mb-3 ml-auto max-w-[88%] rounded-2xl px-3 py-2 text-sm text-white shadow-sm"
-                                            style={{
-                                                backgroundColor:
-                                                    theme.userBubble,
-                                            }}
-                                        >
-                                            {selected.question}
-                                        </div>
-                                        <div
-                                            className="max-w-[92%] rounded-2xl border bg-white px-3 py-3 text-sm leading-relaxed text-slate-800 shadow-sm"
-                                            style={{
-                                                borderColor: theme.alertBorder,
-                                            }}
-                                        >
-                                            {selected.answer}
-                                        </div>
-                                    </div>
-                                ) : messages.length > 0 ? (
-                                    <div>
+                                    ))}
+                                </div>
+                                <div className="space-y-2">
+                                    {questions.map((q) => (
                                         <button
-                                            type="button"
-                                            onClick={resetConversation}
-                                            disabled={isLoading}
-                                            className="mb-4 flex items-center gap-1 text-xs font-semibold disabled:opacity-50"
-                                            style={{ color: theme.accent }}
+                                            key={q.id}
+                                            onClick={() =>
+                                                void ask(q.question, q)
+                                            }
+                                            className="w-full rounded-xl border border-slate-200 px-3 py-3 text-left text-sm text-slate-800 hover:border-[#77152d] hover:bg-rose-50"
                                         >
-                                            <ChevronLeft className="h-4 w-4" />
-                                            Ask another question
+                                            {q.question}
                                         </button>
-                                        <div className="space-y-3">
-                                            {messages.map((message, index) => (
-                                                <div
-                                                    key={`${message.role}-${index}`}
-                                                    className={
-                                                        message.role === 'user'
-                                                            ? 'ml-auto max-w-[88%] rounded-2xl px-3 py-2 text-sm text-white shadow-sm'
-                                                            : 'max-w-[92%] whitespace-pre-wrap rounded-2xl border bg-white px-3 py-3 text-sm leading-relaxed text-slate-800 shadow-sm'
-                                                    }
-                                                    style={
-                                                        message.role === 'user'
-                                                            ? {
-                                                                  backgroundColor:
-                                                                      theme.userBubble,
-                                                              }
-                                                            : {
-                                                                  borderColor:
-                                                                      theme.alertBorder,
-                                                              }
-                                                    }
-                                                >
-                                                    {message.content}
-                                                </div>
-                                            ))}
-                                            {isLoading && (
-                                                <div
-                                                    className="flex max-w-[92%] items-center gap-2 rounded-2xl border bg-white px-3 py-3 text-sm text-slate-600 shadow-sm"
-                                                    style={{
-                                                        borderColor:
-                                                            theme.alertBorder,
-                                                    }}
-                                                    role="status"
-                                                >
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Thinking…
-                                                </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={reset}
+                                    className="mb-4 flex items-center gap-1 text-xs font-semibold text-[#77152d]"
+                                >
+                                    <ArrowLeft className="h-4 w-4" />
+                                    Browse questions / clear chat
+                                </button>
+                                <div
+                                    role="log"
+                                    aria-live="polite"
+                                    aria-relevant="additions"
+                                    className="space-y-4"
+                                >
+                                    {messages.map((m, i) => (
+                                        <div
+                                            key={i}
+                                            className={
+                                                m.role === 'user'
+                                                    ? 'ml-auto max-w-[90%] rounded-2xl bg-[#77152d] p-3 text-sm text-white'
+                                                    : 'max-w-[96%] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800'
+                                            }
+                                        >
+                                            <p className="whitespace-pre-wrap break-words leading-relaxed">
+                                                {m.content}
+                                            </p>
+                                            {m.reply && (
+                                                <>
+                                                    <p className="mt-3 flex items-center gap-1 text-[11px] text-slate-500">
+                                                        <BookOpen className="h-3 w-3" />
+                                                        {m.reply.sourceLabel}
+                                                    </p>
+                                                    {m.reply.links.map(
+                                                        (link) => (
+                                                            <Link
+                                                                key={link.href}
+                                                                href={link.href}
+                                                                onClick={close}
+                                                                className="mt-2 block font-semibold text-[#77152d] underline underline-offset-2"
+                                                            >
+                                                                {link.label}
+                                                            </Link>
+                                                        )
+                                                    )}
+                                                    {m.reply.suggestions.map(
+                                                        (q) => (
+                                                            <button
+                                                                key={q.id}
+                                                                disabled={
+                                                                    loading
+                                                                }
+                                                                onClick={() =>
+                                                                    void ask(
+                                                                        q.question,
+                                                                        PREDEFINED_QUESTIONS.find(
+                                                                            (
+                                                                                item
+                                                                            ) =>
+                                                                                item.id ===
+                                                                                q.id
+                                                                        )
+                                                                    )
+                                                                }
+                                                                className="mt-2 block w-full rounded-lg border bg-white p-2 text-left text-xs hover:bg-rose-50"
+                                                            >
+                                                                {q.question}
+                                                            </button>
+                                                        )
+                                                    )}
+                                                </>
                                             )}
                                         </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <p className="mb-3 text-sm font-semibold text-slate-800">
-                                            Choose a topic
-                                        </p>
-                                        <div className="mb-5 flex flex-wrap gap-2">
-                                            {CATEGORIES.map((item) => (
-                                                <button
-                                                    key={item}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        chooseCategory(item)
-                                                    }
-                                                    className="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-                                                    style={
-                                                        category === item
-                                                            ? {
-                                                                  color: 'white',
-                                                                  borderColor:
-                                                                      theme.accent,
-                                                                  backgroundColor:
-                                                                      theme.accent,
-                                                              }
-                                                            : {
-                                                                  color: theme.accent,
-                                                                  borderColor:
-                                                                      theme.alertBorder,
-                                                                  backgroundColor:
-                                                                      theme.alertBg,
-                                                              }
-                                                    }
-                                                >
-                                                    {CATEGORY_LABELS[item]}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <p className="mb-3 text-sm font-semibold text-slate-800">
-                                            Select a question
-                                        </p>
-                                        <div className="space-y-2">
-                                            {questions.map((item) => (
-                                                <button
-                                                    key={item.id}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setSelected(item)
-                                                    }
-                                                    className="w-full rounded-xl border px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:shadow-sm"
-                                                    style={{
-                                                        borderColor:
-                                                            theme.alertBorder,
-                                                        backgroundColor:
-                                                            theme.alertBg,
-                                                    }}
-                                                >
-                                                    {item.question}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            <div className="border-t border-slate-200 bg-slate-50 px-4 py-3">
-                                <form
-                                    onSubmit={handleSubmit}
-                                    className="flex items-center gap-2"
-                                >
-                                    <input
-                                        type="text"
-                                        value={input}
-                                        onChange={(event) =>
-                                            setInput(event.target.value)
-                                        }
-                                        disabled={isLoading}
-                                        maxLength={2000}
-                                        placeholder="Ask about Harmonisys…"
-                                        aria-label="Ask the Harmonisys assistant"
-                                        className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={isLoading || !input.trim()}
-                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-                                        style={{
-                                            backgroundColor: theme.userBubble,
-                                        }}
-                                        aria-label="Send question"
-                                    >
-                                        {isLoading ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Send className="h-4 w-4" />
-                                        )}
-                                    </button>
-                                </form>
-                                <p className="mt-2 text-center text-[11px] text-slate-500">
-                                    Suggested questions use verified predefined
-                                    answers.
-                                </p>
-                            </div>
-                        </CardBody>
-                    </Card>
-                </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                        {loading && (
+                            <p
+                                role="status"
+                                className="mt-4 flex items-center gap-2 text-sm text-slate-500"
+                            >
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Finding guidance…
+                            </p>
+                        )}
+                        <div ref={end} />
+                    </div>
+                    <form
+                        onSubmit={submit}
+                        className="shrink-0 border-t bg-white px-4 py-3"
+                    >
+                        <label htmlFor="guide-question" className="sr-only">
+                            Ask the Harmonisys guide
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                id="guide-question"
+                                ref={field}
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                maxLength={2000}
+                                placeholder="How do I request Responder access?"
+                                disabled={loading}
+                                className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-3 text-sm focus:border-[#77152d] focus:outline-none focus:ring-2 focus:ring-rose-100"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!input.trim() || loading}
+                                aria-label="Send question"
+                                className="rounded-xl bg-[#77152d] px-4 text-white disabled:opacity-40"
+                            >
+                                <Send className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </form>
+                </section>
             )}
         </>
     );

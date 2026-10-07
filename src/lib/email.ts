@@ -14,42 +14,21 @@
  *   NEXT_PUBLIC_APP_URL — base URL for deep-links in emails
  */
 
-import nodemailer from 'nodemailer';
+import { sendCheckedMail, mailFrom } from '@/lib/mail/transport';
+import { ADMIN_INBOX, escapeEmailHtml } from '@/lib/mail/adminInbox';
 
 // ─── Transporter (lazy singleton) ───────────────────────────────────────────
 // NOT created at module load time — env vars must be read inside a function
 // so Next.js has fully populated process.env before we access them.
 
-let _transporter: nodemailer.Transporter | null = null;
-
-function getTransporter() {
-    if (_transporter) return _transporter;
-
-    _transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST!,
-        port: Number(process.env.SMTP_PORT ?? 587),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-            user: process.env.SMTP_USER!,
-            pass: process.env.SMTP_PASS!,
-        },
-    });
-
-    return _transporter;
-}
-
 // ─── Helpers (lazy — read env vars at call time, not module load time) ───────
 
 function getFrom() {
-    return (
-        process.env.EMAIL_FROM ??
-        process.env.SMTP_USER ??
-        'no-reply@harmonisys.ph'
-    );
+    return mailFrom();
 }
 
 function getAdminEmail() {
-    return process.env.DRRM_H_EMAIL ?? 'drrm-h@harmonisys.ph';
+    return ADMIN_INBOX;
 }
 
 function getAppUrl() {
@@ -119,7 +98,7 @@ export async function sendRoleRequestToAdmin(payload: {
         requestId,
     } = payload;
 
-    const adminUrl = `${getAppUrl()}/admin/users`;
+    const adminUrl = `${getAppUrl()}/users`;
 
     const html = htmlWrapper(`
     <p>Hello, DRRM-H Admin,</p>
@@ -129,12 +108,12 @@ export async function sendRoleRequestToAdmin(payload: {
     </p>
 
     <div class="info-box">
-      <p><strong>Name:</strong> ${userName ?? 'N/A'}</p>
-      <p><strong>Email:</strong> ${userEmail}</p>
+      <p><strong>Name:</strong> ${escapeEmailHtml(userName ?? 'N/A')}</p>
+      <p><strong>Email:</strong> ${escapeEmailHtml(userEmail)}</p>
       <p><strong>Requested Role:</strong> ${toRole}</p>
-      ${requestedOrganization ? `<p><strong>Organization:</strong> ${requestedOrganization}</p>` : ''}
+      ${requestedOrganization ? `<p><strong>Organization:</strong> ${escapeEmailHtml(requestedOrganization)}</p>` : ''}
       ${requestedMhpssLevel ? `<p><strong>MHPSS Level:</strong> ${requestedMhpssLevel.replace('LEVEL_', 'Level ')}</p>` : ''}
-      ${requestedCertUrl ? `<p><strong>Certificate:</strong> <a href="${requestedCertUrl}" style="color:#A11B1B">View Certificate</a></p>` : ''}
+      ${requestedCertUrl ? `<p><strong>Certificate:</strong> <a href="${escapeEmailHtml(requestedCertUrl)}" style="color:#A11B1B">View Certificate</a></p>` : ''}
       <p><strong>Request ID:</strong> <code>${requestId}</code></p>
     </div>
 
@@ -145,12 +124,17 @@ export async function sendRoleRequestToAdmin(payload: {
     </div>
   `);
 
-    await getTransporter().sendMail({
+    const delivery = await sendCheckedMail({
         from: getFrom(),
         to: getAdminEmail(),
         subject: `[HARMONISYS] Role Upgrade Request — ${userName ?? userEmail}`,
         html,
     });
+    if (!delivery.accepted?.length || delivery.rejected?.length) {
+        throw new Error(
+            'The mail server did not accept the role notification.'
+        );
+    }
 }
 
 // ─── 2. Email TO USER when admin approves ───────────────────────────────────
@@ -163,7 +147,7 @@ export async function sendRoleApprovedEmail(payload: {
     const { userName, userEmail, newRole } = payload;
 
     const html = htmlWrapper(`
-    <p>Hello ${userName ?? 'there'},</p>
+    <p>Hello ${escapeEmailHtml(userName ?? 'there')},</p>
     <p>
       Great news! Your request to upgrade to
       <strong>${newRole}</strong> on HARMONISYS.PH has been
@@ -184,7 +168,7 @@ export async function sendRoleApprovedEmail(payload: {
     </p>
   `);
 
-    await getTransporter().sendMail({
+    await sendCheckedMail({
         from: getFrom(),
         to: userEmail,
         subject: `[HARMONISYS] Your Role Upgrade Request Was Approved 🎉`,
@@ -212,7 +196,7 @@ export async function sendRoleRejectedEmail(payload: {
 
     ${
         reason
-            ? `<div class="info-box"><p><strong>Reason:</strong> ${reason}</p></div>`
+            ? `<div class="info-box"><p><strong>Reason:</strong> ${escapeEmailHtml(reason)}</p></div>`
             : ''
     }
 
@@ -226,7 +210,7 @@ export async function sendRoleRejectedEmail(payload: {
     </div>
   `);
 
-    await getTransporter().sendMail({
+    await sendCheckedMail({
         from: getFrom(),
         to: userEmail,
         subject: `[HARMONISYS] Your Role Upgrade Request Was Not Approved`,

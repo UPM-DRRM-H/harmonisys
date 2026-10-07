@@ -1,4 +1,5 @@
 'use client';
+import { WellnessResponses } from '@/components/charts/ReadableCharts';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -614,61 +615,8 @@ const TeamDetailPage = ({ teamName }: TeamPageProps) => {
                             </div>
                         </CardHeader>
                         <CardBody className="pt-6">
-                            <div className="w-full h-[360px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart
-                                        data={chartData}
-                                        margin={{
-                                            top: 10,
-                                            right: 20,
-                                            left: 10,
-                                            bottom: 40,
-                                        }}
-                                        barCategoryGap="18%"
-                                    >
-                                        <CartesianGrid
-                                            strokeDasharray="3 3"
-                                            stroke="#f0f0f0"
-                                        />
-                                        <XAxis
-                                            dataKey="question"
-                                            angle={-35}
-                                            textAnchor="end"
-                                            height={70}
-                                            fontSize={12}
-                                            stroke="#666"
-                                        />
-                                        <YAxis fontSize={12} stroke="#666" />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend
-                                            wrapperStyle={{
-                                                paddingTop: '8px',
-                                            }}
-                                            iconType="rect"
-                                        />
-                                        <Bar
-                                            dataKey="positive"
-                                            stackId="a"
-                                            fill="#22c55e"
-                                            name="Positive"
-                                            radius={[0, 0, 0, 0]}
-                                        />
-                                        <Bar
-                                            dataKey="neutral"
-                                            stackId="a"
-                                            fill="#f59e0b"
-                                            name="Neutral"
-                                            radius={[0, 0, 0, 0]}
-                                        />
-                                        <Bar
-                                            dataKey="negative"
-                                            stackId="a"
-                                            fill="#ef4444"
-                                            name="Needs Attention"
-                                            radius={[4, 4, 0, 0]}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                            <div className="w-full min-w-0">
+                                <WellnessResponses rows={chartData} />
                             </div>
                         </CardBody>
                     </Card>

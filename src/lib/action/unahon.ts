@@ -1,6 +1,9 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { requireUser } from '@/lib/access';
+import { WorkflowError } from '@/lib/validation';
+import { unahonSections } from '@/constants/Unahon';
 import { AssessmentType } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import type { Checklist, ConfidentialForm, UnahonSummary } from '@/types';
@@ -29,10 +32,12 @@ export const getUnahonFormsGroupedByClient = async (
     error?: string;
 }> => {
     try {
+        const user = await requireUser(['ADMIN', 'RESPONDER']);
         const skip = limit ? (page - 1) * limit : 0;
 
         // Build where clause based on filters
-        const whereClause: any = {};
+        const whereClause: any =
+            user.role === 'ADMIN' ? {} : { userId: user.id };
 
         // Search filter
         if (filters?.search) {
@@ -198,28 +203,82 @@ export const saveUnahonForm = async (data: {
     };
 }) => {
     try {
-        const result = await prisma.unahon.create({
-            data: {
-                client: data.client,
-                userId: data.userId,
-                location: data.location,
-                affiliation: data.affiliation,
-                date: data.date,
-                assessmentType: data.assessmentType,
-                checklist: {
-                    create: Object.entries(data.checklist).flatMap(
-                        ([category, questions]) =>
-                            Object.entries(questions).map(
-                                ([key, [agree, disagree]]) => ({
-                                    category: Number(category),
-                                    key: Number(key),
-                                    agree,
-                                    disagree,
-                                })
-                            )
-                    ),
+        const user = await requireUser(['ADMIN', 'RESPONDER']);
+        if (!user.mhpssLevel)
+            throw new WorkflowError('MHPSS competency is required.', 403);
+        if (
+            !data.checklist ||
+            unahonSections.some((section, category) =>
+                section.questions.some(
+                    (question) => !data.checklist[category]?.[question.number]
+                )
+            )
+        )
+            throw new WorkflowError('Complete every assessment item.');
+        if (
+            !data.client?.trim() ||
+            !data.affiliation?.trim() ||
+            !Object.values(AssessmentType).includes(data.assessmentType) ||
+            Number.isNaN(new Date(data.date).getTime())
+        )
+            throw new WorkflowError('Complete the required assessment fields.');
+        for (const questions of Object.values(data.checklist))
+            for (const answer of Object.values(questions)) {
+                if (
+                    !Array.isArray(answer) ||
+                    answer.length !== 2 ||
+                    answer.some((value) => typeof value !== 'boolean') ||
+                    answer[0] === answer[1]
+                )
+                    throw new WorkflowError(
+                        'Answer every assessment item with Agree or Disagree.'
+                    );
+            }
+        const result = await prisma.$transaction(async (tx) => {
+            if (data.assessmentType === 'RE_ASSESSMENT')
+                await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'reassess:' + user.id}))`;
+            const result = await tx.unahon.create({
+                data: {
+                    client: data.client,
+                    userId: user.id,
+                    location: data.location,
+                    affiliation: data.affiliation,
+                    date: data.date,
+                    assessmentType: data.assessmentType,
+                    checklist: {
+                        create: Object.entries(data.checklist).flatMap(
+                            ([category, questions]) =>
+                                Object.entries(questions).map(
+                                    ([key, [agree, disagree]]) => ({
+                                        category: Number(category),
+                                        key: Number(key),
+                                        agree,
+                                        disagree,
+                                    })
+                                )
+                        ),
+                    },
                 },
-            },
+            });
+            if (data.assessmentType === 'RE_ASSESSMENT') {
+                const pending = await tx.unahonReassessmentRequest.findFirst({
+                    where: {
+                        userId: user.id,
+                        status: 'PENDING',
+                        OR: [{ client: data.client }, { client: null }],
+                    },
+                    orderBy: { createdAt: 'desc' },
+                });
+                if (!pending)
+                    throw new WorkflowError(
+                        'No matching reassessment request exists.'
+                    );
+                await tx.unahonReassessmentRequest.update({
+                    where: { id: pending.id },
+                    data: { status: 'COMPLETED', completedAt: new Date() },
+                });
+            }
+            return result;
         });
         revalidatePath('/unahon');
         return result;
@@ -231,7 +290,9 @@ export const saveUnahonForm = async (data: {
 
 export const getUsedPatientIds = async () => {
     try {
+        const user = await requireUser(['ADMIN', 'RESPONDER']);
         const records = await prisma.unahon.findMany({
+            where: user.role === 'ADMIN' ? {} : { userId: user.id },
             select: {
                 client: true,
             },
@@ -257,7 +318,9 @@ export const getUnahonFormsSummary = async (): Promise<UnahonSummary> => {
     };
 
     try {
+        const user = await requireUser(['ADMIN', 'RESPONDER']);
         const unahonForms = await prisma.unahon.findMany({
+            where: user.role === 'ADMIN' ? {} : { userId: user.id },
             include: {
                 checklist: true,
             },
@@ -315,7 +378,6 @@ export const getUnahonFormsSummary = async (): Promise<UnahonSummary> => {
 
         return unahonSummary;
     } catch (error) {
-        console.error('Error fetching Unahon summary:', error);
-        return unahonSummary;
+        throw new Error('Unahon records could not be loaded. Please retry.');
     }
 };
